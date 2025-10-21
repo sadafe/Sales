@@ -1,0 +1,64 @@
+# Конфигурация для Email Extractor
+extraction:
+  delay_between_requests: 10  # Задержка между запросами в секундах
+  max_retries: 3              # Максимальное количество повторных попыток
+  timeout: 10                 # Таймаут запроса в секундах
+  user_agent_rotation: true   # Ротация User-Agent
+  use_proxies: false          # Использовать прокси
+
+database:
+  path: "data/database/emails.db"
+  backup_enabled: true
+  backup_interval: 24  # Часы
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "data/output/logs/email_extractor.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+categories:
+  - name: "monitor"
+    urls_file: "data/input/urls/monitor.csv"
+    output_file: "data/output/emails/monitor_emails.txt"
+    description: "Мониторы и дисплеи"
+  - name: "buk"
+    urls_file: "data/input/urls/buk.csv"
+    output_file: "data/output/emails/buk_emails.txt"
+    description: "Буки и ноутбуки"
+  - name: "creslo"
+    urls_file: "data/input/urls/creslo.csv"
+    output_file: "data/output/emails/creslo_emails.txt"
+    description: "Кресла и мебель"
+  - name: "klava"
+    urls_file: "data/input/urls/klava.csv"
+    output_file: "data/output/emails/klava_emails.txt"
+    description: "Клавиатуры"
+  - name: "kolonka"
+    urls_file: "data/input/urls/kolonka.csv"
+    output_file: "data/output/emails/kolonka_emails.txt"
+    description: "Колонки и аудио"
+  - name: "mouse"
+    urls_file: "data/input/urls/mouse.csv"
+    output_file: "data/output/emails/mouse_emails.txt"
+    description: "Мыши и периферия"
+  - name: "noutbuk"
+    urls_file: "data/input/urls/noutbuk.csv"
+    output_file: "data/output/emails/noutbuk_emails.txt"
+    description: "Ноутбуки"
+  - name: "radio"
+    urls_file: "data/input/urls/radio.csv"
+    output_file: "data/output/emails/radio_emails.txt"
+    description: "Радио и связь"
+  - name: "ssd"
+    urls_file: "data/input/urls/ssd.csv"
+    output_file: "data/output/emails/ssd_emails.txt"
+    description: "SSD накопители"
+  - name: "ibp"
+    urls_file: "data/input/urls/ibp.csv"
+    output_file: "data/output/emails/ibp_emails.txt"
+    description: "ИБП и источники питания"
+  - name: "arm"
+    urls_file: "data/input/urls/arm.csv"
+    output_file: "data/output/emails/arm_emails.txt"
+    description: "АРМ и системные блоки"

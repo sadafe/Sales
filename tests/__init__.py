@@ -1,0 +1,3 @@
+"""
+Тесты для Email Extractor
+"""

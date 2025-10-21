@@ -1,0 +1,16 @@
+# Основные зависимости для Email Extractor
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+fake-useragent>=1.4.0
+PyYAML>=6.0
+lxml>=4.9.0
+
+# Дополнительные зависимости для разработки
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Для логирования
+colorlog>=6.7.0
