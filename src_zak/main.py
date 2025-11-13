@@ -71,18 +71,27 @@ class ZakupkiProcessor:
 
         for attempt in range(retries + 1):
             try:
-                response = requests.get(ktru_url, headers=self.HEADERS, timeout=10, verify=True)
+                response = requests.get(
+                    ktru_url, headers=self.HEADERS, timeout=10, verify=True
+                )
                 response.raise_for_status()
                 return response.text
             except requests.RequestException as e:
                 if attempt == retries:
-                    raise RuntimeError(f"Не удалось загрузить страницу после {retries} попыток: {e}")
+                    raise RuntimeError(
+                        f"Не удалось загрузить страницу после {retries} попыток: {e}"
+                    )
                 print(f"Попытка {attempt + 1} неудачна, повторяю: {e}")
         raise RuntimeError("Неожиданная ошибка")
 
     def _clean_text(self, element) -> str:
         """Очистка строковых данных от нечитаемых символов и пробелов"""
-        return element.get_text(strip=True).replace("\xa0", "").replace("  ", "").replace("\n", "")
+        return (
+            element.get_text(strip=True)
+            .replace("\xa0", "")
+            .replace("  ", "")
+            .replace("\n", "")
+        )
 
     def get_ktru_version(self) -> str:
         """
@@ -95,7 +104,7 @@ class ZakupkiProcessor:
         html_content = self.load_url(ktru_url)
         soup = BeautifulSoup(html_content, "html.parser")
         version_input = soup.find("input", {"id": "ktruItemVersionId"})
-        if not version_input or not hasattr(version_input, 'get'):
+        if not version_input or not hasattr(version_input, "get"):
             raise ValueError("Не удалось найти версию КТРУ на странице")
         value = version_input.get("value")
         if not value:
@@ -119,27 +128,32 @@ class ZakupkiProcessor:
         for row in table.select("tr.tableBlock__row"):
             cells = row.select("td")
             if len(cells) == 3:
-                data_rows.append([
-                    self._clean_text(cells[0]),
-                    self._clean_text(cells[1]),
-                    self._clean_text(cells[2])
-                ])
+                data_rows.append(
+                    [
+                        self._clean_text(cells[0]),
+                        self._clean_text(cells[1]),
+                        self._clean_text(cells[2]),
+                    ]
+                )
             elif len(cells) == 2:
-                data_rows.append([
-                    "",
-                    self._clean_text(cells[0]),
-                    self._clean_text(cells[1])
-                ])
+                data_rows.append(
+                    ["", self._clean_text(cells[0]), self._clean_text(cells[1])]
+                )
 
-        df = pd.DataFrame(data_rows, columns=[
-            "Наименование характеристики",
-            "Значение характеристики",
-            "Единица измерения характеристики"
-        ])
+        df = pd.DataFrame(
+            data_rows,
+            columns=[
+                "Наименование характеристики",
+                "Значение характеристики",
+                "Единица измерения характеристики",
+            ],
+        )
 
         # Сохранение в файлы
         latex_file = "tt.tex"
-        df.to_latex(latex_file, index=False, column_format="|l|c|c|", header=True, multirow=True)
+        df.to_latex(
+            latex_file, index=False, column_format="|l|c|c|", header=True, multirow=True
+        )
         df.to_excel(f"{self.ktru}.xlsx", sheet_name="Sheet1", index=False)
 
         os.system(f"pandoc.exe -s -f latex {latex_file} -o {self.ktru}.docx")
@@ -165,7 +179,9 @@ def processor() -> None:
                 print(f"Ошибка при обработке КТРУ {ktru_input}: {e}")
                 break
         else:
-            print("Неверный формат КТРУ. Ожидается формат XX.XX.XX.XXX-XXXXXXXX. Попробуйте снова.")
+            print(
+                "Неверный формат КТРУ. Ожидается формат XX.XX.XX.XXX-XXXXXXXX. Попробуйте снова."
+            )
 
 
 def main() -> None:
