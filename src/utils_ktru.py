@@ -3,8 +3,7 @@
 
 import os
 import re
-from tkinter import filedialog
-from tkinter import Tk
+from tkinter import Tk, filedialog
 
 import pandas as pd
 import requests
@@ -106,9 +105,10 @@ class ZakupkiProcessor:
         html_content = self.load_url(ktru_url)
         soup = BeautifulSoup(html_content, "html.parser")
         version_input = soup.find("input", {"id": "ktruItemVersionId"})
-        if not version_input or not hasattr(version_input, "get"):
+        if not version_input:
             raise ValueError("Не удалось найти версию КТРУ на странице")
-        value = version_input.get("value")
+        # BeautifulSoup возвращает Tag объект, у которого есть .get() и ['key'] доступы
+        value = version_input.get("value")  # type: ignore
         if not value:
             raise ValueError("Версия КТРУ пуста")
         return str(value)
@@ -154,7 +154,9 @@ class ZakupkiProcessor:
         # Выбор пути для сохранения файлов через диалог
         root = Tk()
         root.withdraw()  # Скрываем основное окно
-        output_dir = filedialog.askdirectory(title="Выберите папку для сохранения файлов")
+        output_dir = filedialog.askdirectory(
+            title="Выберите папку для сохранения файлов"
+        )
         if not output_dir:
             output_dir = "."
 

@@ -123,7 +123,7 @@ def main(stdscr):
             if key == ord("q") or (
                 current_menu == top_level_menu
                 and current_menu[selected_idx].text == "Выход"
-                and key == 10  # curses.KEY_ENTER
+                and (key == curses.KEY_ENTER or key in [10, 13])
             ):
                 break
 
