@@ -4,6 +4,7 @@
 import os
 import re
 from tkinter import Tk, filedialog
+from loguru import logger
 
 import pandas as pd
 import requests
@@ -82,7 +83,7 @@ class ZakupkiProcessor:
                     raise RuntimeError(
                         f"Не удалось загрузить страницу после {retries} попыток: {e}"
                     )
-                print(f"Попытка {attempt + 1} неудачна, повторяю: {e}")
+                logger.warning(f"Попытка {attempt + 1} неудачна, повторяю: {e}")
         raise RuntimeError("Неожиданная ошибка")
 
     def _clean_text(self, element) -> str:
@@ -119,11 +120,13 @@ class ZakupkiProcessor:
         """
         ktru_version = self.get_ktru_version()
         url = f"/epz/ktru/ktruCard/ktru-part-description.html?itemVersionId={ktru_version}&page=1&recordsPerPage=5000&isTemplate=false&onlyRequired=false"
+        logger.info(f"Загрузка данных для КТРУ {self.ktru} с версии {ktru_version}")
         html_content = self.load_url(url)
 
         soup = BeautifulSoup(html_content, "html.parser")
         table = soup.select_one("table.blockInfo__table")
         if not table:
+            logger.error(f"Таблица с характеристиками не найдена для КТРУ {self.ktru}")
             raise ValueError("Таблица с характеристиками не найдена")
 
         data_rows = []
@@ -165,6 +168,7 @@ class ZakupkiProcessor:
         excel_file = os.path.join(output_dir, f"{self.ktru}.xlsx")
         docx_file = os.path.join(output_dir, f"{self.ktru}.docx")
 
+        logger.info(f"Сохранение данных в файлы для КТРУ {self.ktru}")
         df.to_latex(
             latex_file, index=False, column_format="|l|c|c|", header=True, multirow=True
         )
@@ -172,6 +176,7 @@ class ZakupkiProcessor:
 
         os.system(f"pandoc.exe -s -f latex {latex_file} -o {docx_file}")
         os.remove(latex_file)
+        logger.info(f"Файлы успешно сохранены: {excel_file}, {docx_file}")
 
 
 def processor() -> None:
@@ -187,9 +192,11 @@ def processor() -> None:
             processor_instance = ZakupkiProcessor(ktru_input)
             try:
                 processor_instance.process_data()
+                logger.info(f"Данные для КТРУ {ktru_input} успешно обработаны")
                 print(f"Данные для КТРУ {ktru_input} успешно обработаны")
                 break
             except Exception as e:
+                logger.error(f"Ошибка при обработке КТРУ {ktru_input}: {e}")
                 print(f"Ошибка при обработке КТРУ {ktru_input}: {e}")
                 break
         else:

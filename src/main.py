@@ -1,4 +1,6 @@
 import curses
+import sys
+from loguru import logger
 
 import utils_ktru
 
@@ -42,11 +44,14 @@ def handle_menu_choice(
         tuple: (new_current_menu, new_selected_idx)
     """
     if choice_text == "Запрос КТРУ":
+        logger.info("Запуск модуля КТРУ")
         # Запуск программы src/utils_data.py
         curses.endwin()  # Завершаем curses перед запуском другой программы
         try:
             utils_ktru.processor()
+            logger.info("Модуль КТРУ успешно завершен")
         except Exception as e:
+            logger.error(f"Ошибка запуска программы КТРУ: {e}")
             print(f"Ошибка запуска программы: {e}")
         # После завершения программы возвращаемся в меню
         return top_level_menu, 0
@@ -94,6 +99,12 @@ def handle_menu_choice(
 
 
 def main(stdscr):
+    logger.info("Запуск главного меню приложения")
+
+    # Проверка аргументов командной строки для логирования в файл
+    if len(sys.argv) > 1 and sys.argv[1] == '-log':
+        logger.add("app.log", rotation="1 MB", retention="7 days", level="INFO")
+
     # Настройка экрана
     curses.curs_set(0)
     stdscr.nodelay(False)
@@ -123,7 +134,7 @@ def main(stdscr):
             if key == ord("q") or (
                 current_menu == top_level_menu
                 and current_menu[selected_idx].text == "Выход"
-                and (key == curses.KEY_ENTER or key in [10, 13])
+                and (key == curses.KEY_ENTER or key in [10, 13, 459])
             ):
                 break
 
@@ -137,7 +148,7 @@ def main(stdscr):
                 if selected_idx >= len(current_menu):
                     selected_idx = 0
 
-            elif key == curses.KEY_ENTER or key in [10, 13]:
+            elif key == curses.KEY_ENTER or key in [10, 13, 459]:
                 choice_text = current_menu[selected_idx].text
                 current_menu, selected_idx = handle_menu_choice(
                     stdscr,

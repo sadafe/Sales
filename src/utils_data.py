@@ -7,6 +7,7 @@ import datetime
 import os
 import sqlite3
 from pathlib import Path
+from loguru import logger
 
 import pandas as pd
 
@@ -27,6 +28,7 @@ class Ktru:
 
     def init_database(self):
         """Создает таблицы базы данных если они не существуют"""
+        logger.info("Инициализация базы данных")
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -54,7 +56,7 @@ class Ktru:
                 conn.commit()
 
         except sqlite3.Error as e:
-            print(f"Ошибка при инициализации базы данных: {e}")
+            logger.error(f"Ошибка при инициализации базы данных: {e}")
             raise
 
     def _load_pd(self, file: str, sheet_name: str, table_name: str, headers: int):
@@ -84,9 +86,9 @@ class Ktru:
 
             if time_file > date_bd: # Если файл моложе, загружаем его в базу данных
                 try:
-                    print(f"Загрузка {file}")
+                    logger.info(f"Загрузка файла {file}")
                     wb = pd.read_excel(file, sheet_name=sheet_name, header=headers)
-                    print("Запись в базу данных")
+                    logger.info("Запись данных в базу данных")
                     wb.to_sql(table_name, conn, index=True, if_exists="replace")
                     cursor = conn.cursor()
                     exect = f"CREATE INDEX IF NOT EXISTS idx_{table_name}_id ON {table_name}(ОГРН)"
@@ -95,11 +97,11 @@ class Ktru:
                     cursor.execute(exect)
                     conn.commit()
                 except Exception as e:
-                    print(f"Ошибка в модуле _load_pd при загрузке {file} :{e}")
+                    logger.error(f"Ошибка в модуле _load_pd при загрузке {file}: {e}")
                     raise
 
             if datetime.datetime.now() > time_file + datetime.timedelta(days=10):
-                print(f"Рекоментуется обновить файл {file}")
+                logger.warning(f"Рекоментуется обновить файл {file}")
 
     def pd_to_sql(self):
         """Заполнение данными базу данных"""
