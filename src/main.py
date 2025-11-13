@@ -1,5 +1,6 @@
 import curses
 import sys
+
 from loguru import logger
 
 import utils_ktru
@@ -8,6 +9,7 @@ MENU_BACK = "Назад"
 MENU_MAIN = "Главная"
 MENU_HELP = "Справка"
 MENU_EXIT = "Выход"
+logger.remove()
 
 
 class MenuItem:
@@ -99,10 +101,8 @@ def handle_menu_choice(
 
 
 def main(stdscr):
-    logger.info("Запуск главного меню приложения")
-
     # Проверка аргументов командной строки для логирования в файл
-    if len(sys.argv) > 1 and sys.argv[1] == '-log':
+    if len(sys.argv) > 1 and sys.argv[1] == "-log":
         logger.add("app.log", rotation="1 MB", retention="7 days", level="INFO")
 
     # Настройка экрана
