@@ -10,7 +10,7 @@ from pathlib import Path
 # Добавляем src в путь для импорта
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.email_extractor import main
+from src.main import main
 
 if __name__ == "__main__":
     main()
