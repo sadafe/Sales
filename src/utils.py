@@ -1,7 +1,6 @@
 """
 Утилиты для Email Extractor
 """
-import pprint
 import re
 import random
 import time

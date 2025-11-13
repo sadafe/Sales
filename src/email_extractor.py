@@ -6,7 +6,7 @@ import argparse
 import random
 import sys
 import time
-from typing import List, Optional, Dict
+from typing import Any, List, Literal, Optional, Dict
 
 import requests
 from bs4 import BeautifulSoup
@@ -50,7 +50,7 @@ class EmailExtractor:
             self.proxies = is_good_proxy(proxy_file)
 
 
-    def get_webpage_content(self, url: str, max_retries: int = None) -> Optional[str]:
+    def get_webpage_content(self, url: str, max_retries: Optional[int] = None) -> Optional[str]:
         """
         Получает содержимое веб-страницы с повторными попытками
         
@@ -61,8 +61,7 @@ class EmailExtractor:
         Returns:
             HTML содержимое страницы или None при ошибке
         """
-        if max_retries is None:
-            max_retries = self.config.get('extraction', {}).get('max_retries', 3)
+        max_retries = max_retries if max_retries is not None else self.config.get('extraction', {}).get('max_retries', 3)
 
         headers = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -122,7 +121,7 @@ class EmailExtractor:
 
         return None
 
-    def extract_emails_from_webpage(self, url: str) -> List[str]:
+    def extract_emails_from_webpage(self, url: str) -> tuple[Literal[''], list[Any]] | list[str] | list[Any]:
         """
         Извлекает email-адреса с веб-страницы
         
@@ -130,19 +129,22 @@ class EmailExtractor:
             url: URL веб-страницы
             
         Returns:
+    TODO:        название компании
             Список найденных email-адресов
         """
+        emails = []
+        company = ''
         normalized_url = normalize_url(url)
         content = self.get_webpage_content(normalized_url)
 
         if not content:
-            return []
-
-        emails = []
+            return company, emails
 
         try:
             # Используем BeautifulSoup для парсинга HTML
             soup = BeautifulSoup(content, 'html.parser')
+            company = soup.find("a", {"class": "link fw-700 fs-24"}).text
+            print(f'{company=}')
 
             # 1. Извлекаем email из ссылок mailto:
             mailto_links = soup.select('a[href^="mailto:"]')
@@ -183,30 +185,31 @@ class EmailExtractor:
             unique_emails = sorted(list(set(valid_emails)))
 
             self.logger.info("Найдено %s уникальных email-адресов на %s", len(unique_emails), url)
-            return unique_emails
+            return company, unique_emails
 
         except Exception as e:
             self.logger.error("Ошибка при извлечении email с %s: %s", url, e)
-            return []
+            return company, []
 
-    def process_single_url(self, url: str, category: str = None) -> List[str]:
+    def process_single_url(self, url: str, category: Optional[str] = None, company: Optional[str] = None) -> List[str]:
         """
         Обрабатывает один URL и возвращает найденные email-адреса
-        
+
         Args:
             url: URL для обработки
             category: Категория URL
-            
+            company: Название компании
+
         Returns:
             Список найденных email-адресов
         """
         self.logger.info("Обработка URL: %s", url)
 
-        # Добавляем компанию в базу данных
-        company_id = self.db.add_company(url, category)
-
         # Извлекаем email-адреса
-        emails = self.extract_emails_from_webpage(url)
+        company, emails = self.extract_emails_from_webpage(url)
+
+        # Добавляем компанию в базу данных
+        company_id = self.db.add_company(url, category, company)
 
         if emails:
             # Сохраняем email-адреса в базу данных
@@ -217,7 +220,7 @@ class EmailExtractor:
 
         return emails
 
-    def process_category(self, category_name: str, urls_file: str, output_file: str = None) -> List[str]:
+    def process_category(self, category_name: str, urls_file: str, output_file: Optional[str] = None) -> List[str]:
         """
         Обрабатывает все URL из категории
         

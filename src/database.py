@@ -83,7 +83,7 @@ class EmailDatabase:
             self.logger.error("Ошибка при инициализации базы данных: %s", e)
             raise
 
-    def add_company(self, url: str, category: str = None, company_name: str = None) -> int:
+    def add_company(self, url: str, category: Optional[str] = None, company_name: Optional[str] = None) -> int:
         """
         Добавляет компанию в базу данных
 
@@ -108,7 +108,7 @@ class EmailDatabase:
             self.logger.error("Ошибка при добавлении компании %s: %s", url, e)
             return -1
 
-    def add_emails(self, emails: List[str], company_id: int, source_url: str = None) -> int:
+    def add_emails(self, emails: List[str], company_id: int, source_url: Optional[str] = None) -> int:
         """
         Добавляет email-адреса в базу данных
 
@@ -222,7 +222,7 @@ class EmailDatabase:
         except sqlite3.Error as e:
             self.logger.error("Ошибка при сохранении статистики: %s", e)
 
-    def get_extraction_stats(self, category: str = None) -> List[Dict[str, Any]]:
+    def get_extraction_stats(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Получает статистику извлечения
 
@@ -284,7 +284,7 @@ class EmailDatabase:
             self.logger.error("Ошибка при очистке старых данных: %s", e)
             return 0
 
-    def backup_database(self, backup_path: str = None) -> bool:
+    def backup_database(self, backup_path: Optional[str] = None) -> bool:
         """
         Создает резервную копию базы данных
 
@@ -299,11 +299,11 @@ class EmailDatabase:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = f"data/database/emails_backup_{timestamp}.db"
 
-            backup_path = Path(backup_path)
-            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            backup_path_obj = Path(backup_path)
+            backup_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
             with sqlite3.connect(self.db_path) as source:
-                with sqlite3.connect(backup_path) as backup:
+                with sqlite3.connect(str(backup_path_obj)) as backup:
                     source.backup(backup)
 
             self.logger.info("Резервная копия создана: %s", backup_path)
