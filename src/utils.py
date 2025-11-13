@@ -4,7 +4,7 @@
 import re
 import random
 import time
-import logging
+from loguru import logger
 from proxy_information import ProxyInformation
 import requests
 import urllib.error
@@ -16,45 +16,43 @@ import yaml
 from fake_useragent import UserAgent
 
 
-def setup_logging(log_level: str = "INFO", log_file: str = None) -> logging.Logger:
+def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     """
-    Настраивает логирование для приложения
+    Настраивает логирование для приложения с помощью loguru
 
     Args:
         log_level: Уровень логирования
         log_file: Путь к файлу логов
 
     Returns:
-        Настроенный логгер
+        None (настраивает глобальный логгер loguru)
     """
-    # Создаем логгер
-    logger = logging.getLogger("email_extractor")
-    logger.setLevel(getattr(logging, log_level.upper()))
+    from loguru import logger
 
     # Очищаем существующие обработчики
-    logger.handlers.clear()
+    logger.remove()
 
-    # Формат сообщений
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+    # Добавляем обработчик для консоли
+    logger.add(
+        lambda msg: print(msg, end=""),
+        level=log_level.upper(),
+        format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
+        colorize=True
     )
-
-    # Обработчик для консоли
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
 
     # Обработчик для файла
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        file_handler = logging.FileHandler(log_path, encoding='utf-8')
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    return logger
+        logger.add(
+            log_path,
+            level=log_level.upper(),
+            format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
+            rotation="1 MB",
+            retention="7 days",
+            encoding='utf-8'
+        )
 
 
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
@@ -71,18 +69,18 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
         if not isinstance(config, dict):
-            logging.error(
+            logger.error(
                 "Конфигурация не является словарем: %s", type(config))
             return {}
         return config or {}
     except FileNotFoundError:
-        logging.error("Файл конфигурации не найден: %s", config_path)
+        logger.error("Файл конфигурации не найден: %s", config_path)
         return {}
     except yaml.YAMLError as e:
-        logging.error("Ошибка при чтении конфигурации: %s", e)
+        logger.error("Ошибка при чтении конфигурации: %s", e)
         return {}
     except Exception as e:
-        logging.error("Неожиданная ошибка при загрузке конфигурации: %s", e)
+        logger.error("Неожиданная ошибка при загрузке конфигурации: %s", e)
         return {}
 
 
@@ -246,7 +244,7 @@ def searh_russia(dict_json):
                 add_url = norm_dict_url([f"{lin['ip']}:{lin['port']}"])
                 list_russia.extend(add_url)
         except Exception as e:
-            logging.error('Ошибка в поиске русских прокси %s', e)
+            logger.error('Ошибка в поиске русских прокси %s', e)
     return list_russia
 
 
@@ -266,9 +264,9 @@ def load_proxies(proxy_file: str) -> List[Dict[str, str]]:
             lines = [line.rstrip() for line in f]
 
     except FileNotFoundError:
-        logging.warning("Файл прокси %s не найден", proxy_file)
+        logger.warning("Файл прокси %s не найден", proxy_file)
     except Exception as e:
-        logging.error("Ошибка при загрузке прокси: %s", e)
+        logger.error("Ошибка при загрузке прокси: %s", e)
 
     return norm_dict_url(lines)
 
@@ -300,9 +298,9 @@ def load_proxies_generator(proxy_file: str):
                             'https': f'https://{line}'
                         }
     except FileNotFoundError:
-        logging.warning("Файл прокси %s не найден", proxy_file)
+        logger.warning("Файл прокси %s не найден", proxy_file)
     except Exception as e:
-        logging.error("Ошибка при загрузке прокси: %s", e)
+        logger.error("Ошибка при загрузке прокси: %s", e)
 
 
 def is_bad_proxy(pip):
@@ -318,7 +316,7 @@ def is_bad_proxy(pip):
         print('Error code: ', e.code)
         return e.code
     except Exception as detail:
-        logging.error("ERROR: %s", detail)
+        logger.error("ERROR: %s", detail)
         return True
     return False
 
@@ -404,15 +402,15 @@ def read_urls_from_file(file_path: str) -> List[str]:
                         continue
 
                 # Если формат не распознан — логируем и пропускаем
-                logging.warning(
+                logger.warning(
                     "Строка не распознана как валидная запись CSV: %s", line)
 
             return result
     except FileNotFoundError:
-        logging.error("Файл с URL не найден: %s", file_path)
+        logger.error("Файл с URL не найден: %s", file_path)
         return []
     except Exception as e:
-        logging.error("Ошибка при чтении файла с URL: %s", e)
+        logger.error("Ошибка при чтении файла с URL: %s", e)
         return []
 
 
@@ -435,12 +433,12 @@ def save_emails_to_file(emails: List[str], output_file: str) -> bool:
             for email in emails:
                 f.write(email + '\n')
 
-        logging.info("Сохранено %s email-адресов в файл: %s",
-                     len(emails), output_file)
+        logger.info("Сохранено %s email-адресов в файл: %s",
+                      len(emails), output_file)
         return True
 
     except Exception as e:
-        logging.error("Ошибка при сохранении email-адресов: %s", e)
+        logger.error("Ошибка при сохранении email-адресов: %s", e)
         return False
 
 
