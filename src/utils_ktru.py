@@ -57,6 +57,7 @@ class ZakupkiProcessor:
                 )
             ktru = input("введите КТРУ вида 26.20.15.000-00000024: ")
         self.ktru = ktru
+        logger.info(f"инициализация класса ZakupkiProcessor({ktru}) ")
 
     def load_url(self, base_ktru: str, retries: int = 3) -> str:
         """
@@ -69,6 +70,7 @@ class ZakupkiProcessor:
         Returns:
             HTML-содержимое страницы
         """
+        logger.info(f"Загрузка данных в модуле ZakupkiProcessor.load_url({base_ktru})")
         ktru_url = f"{self.BASE_URL}{base_ktru}"
 
         for attempt in range(retries + 1):
@@ -102,6 +104,7 @@ class ZakupkiProcessor:
         Returns:
             Версия КТРУ
         """
+        logger.info(f"Получение версии КТРУ {self.ktru}")
         ktru_url = f"/epz/ktru/ktruCard/ktru-description.html?itemId={self.ktru}"
         html_content = self.load_url(ktru_url)
         soup = BeautifulSoup(html_content, "html.parser")
@@ -112,6 +115,7 @@ class ZakupkiProcessor:
         value = version_input.get("value")  # type: ignore
         if not value:
             raise ValueError("Версия КТРУ пуста")
+        logger.info(f"версия КТРУ {value}")
         return str(value)
 
     def process_data(self) -> None:
@@ -184,6 +188,7 @@ def processor() -> None:
     print("Введите КТРУ или q для выхода")
     while True:
         ktru_input = input("введите КТРУ вида 26.20.15.000-00000024: ").strip()
+        logger.info(f'введено для поиска: {ktru_input}')
 
         if ktru_input.lower() == "q":
             break
@@ -193,11 +198,9 @@ def processor() -> None:
             try:
                 processor_instance.process_data()
                 logger.info(f"Данные для КТРУ {ktru_input} успешно обработаны")
-                print(f"Данные для КТРУ {ktru_input} успешно обработаны")
                 break
             except Exception as e:
                 logger.error(f"Ошибка при обработке КТРУ {ktru_input}: {e}")
-                print(f"Ошибка при обработке КТРУ {ktru_input}: {e}")
                 break
         else:
             print(
