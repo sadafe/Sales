@@ -1,5 +1,4 @@
 import curses
-import sys
 
 from loguru import logger
 
@@ -116,10 +115,6 @@ def handle_menu_choice(
 
 
 def main(stdscr):
-    # Проверка аргументов командной строки для логирования в файл
-    if len(sys.argv) > 1 and sys.argv[1] == "-log":
-        logger.add("app.log", rotation="1 MB", retention="7 days", level="INFO")
-
     # Настройка экрана
     curses.curs_set(0)
     stdscr.nodelay(False)
