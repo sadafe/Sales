@@ -149,14 +149,27 @@ class ZakupkiProcessor:
             ],
         )
 
+        # Запрос пути для сохранения файлов
+        while True:
+            output_dir = input(f"Введите путь для сохранения файлов (по умолчанию текущая папка): ").strip()
+            if not output_dir:
+                output_dir = "."
+            if os.path.isdir(output_dir):
+                break
+            else:
+                print(f"Папка '{output_dir}' не существует. Попробуйте снова.")
+
         # Сохранение в файлы
-        latex_file = "tt.tex"
+        latex_file = os.path.join(output_dir, "tt.tex")
+        excel_file = os.path.join(output_dir, f"{self.ktru}.xlsx")
+        docx_file = os.path.join(output_dir, f"{self.ktru}.docx")
+
         df.to_latex(
             latex_file, index=False, column_format="|l|c|c|", header=True, multirow=True
         )
-        df.to_excel(f"{self.ktru}.xlsx", sheet_name="Sheet1", index=False)
+        df.to_excel(excel_file, sheet_name="Sheet1", index=False)
 
-        os.system(f"pandoc.exe -s -f latex {latex_file} -o {self.ktru}.docx")
+        os.system(f"pandoc.exe -s -f latex {latex_file} -o {docx_file}")
         os.remove(latex_file)
 
 

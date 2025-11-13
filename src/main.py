@@ -1,5 +1,7 @@
 import curses
 
+import utils_ktru
+
 MENU_BACK = "Назад"
 MENU_MAIN = "Главная"
 MENU_HELP = "Справка"
@@ -39,11 +41,22 @@ def handle_menu_choice(
     Returns:
         tuple: (new_current_menu, new_selected_idx)
     """
-    if choice_text == "Справка":
+    if choice_text == "Запрос КТРУ":
+        # Запуск программы src/utils_data.py
+        curses.endwin()  # Завершаем curses перед запуском другой программы
+        try:
+            utils_ktru.processor()
+        except Exception as e:
+            print(f"Ошибка запуска программы: {e}")
+        # После завершения программы возвращаемся в меню
+        return top_level_menu, 0
+    elif choice_text == "Справка":
         return help_submenu, 0
     elif choice_text == "О программе":
         stdscr.clear()
-        stdscr.addstr("Это приложение для обработки продаж и извлечения email.\n\nНажмите любую клавишу для возврата в меню.")
+        stdscr.addstr(
+            "Это приложение для обработки продаж и извлечения email.\n\nНажмите любую клавишу для возврата в меню."
+        )
         stdscr.refresh()
         stdscr.getch()
         return help_submenu, 0
@@ -53,7 +66,9 @@ def handle_menu_choice(
         stdscr.addstr("- Стрелки вверх/вниз: навигация по меню\n")
         stdscr.addstr("- Enter: выбор пункта\n")
         stdscr.addstr("- Цифры 1-9: быстрый выбор пункта\n")
-        stdscr.addstr("- Q: выход из приложения\n\nНажмите любую клавишу для возврата в меню.")
+        stdscr.addstr(
+            "- Q: выход из приложения\n\nНажмите любую клавишу для возврата в меню."
+        )
         stdscr.refresh()
         stdscr.getch()
         return help_submenu, 0
@@ -85,7 +100,7 @@ def main(stdscr):
 
     # Создание пунктов меню верхнего уровня
     top_level_menu = [
-        MenuItem("Главная"),
+        MenuItem("Запрос КТРУ"),
         MenuItem("Справка"),
         MenuItem("Выход"),
     ]
@@ -100,42 +115,45 @@ def main(stdscr):
     current_menu = top_level_menu
     selected_idx = 0
     while True:
-        display_menu(stdscr, current_menu, selected_idx)
+        try:
+            display_menu(stdscr, current_menu, selected_idx)
 
-        key = stdscr.getch()  # Получаем нажатую клавишу
+            key = stdscr.getch()  # Получаем нажатую клавишу
 
-        if key == ord("q") or (
-            current_menu == top_level_menu
-            and current_menu[selected_idx].text == "Выход"
-            and key == 10  # curses.KEY_ENTER
-        ):
+            if key == ord("q") or (
+                current_menu == top_level_menu
+                and current_menu[selected_idx].text == "Выход"
+                and key == 10  # curses.KEY_ENTER
+            ):
+                break
+
+            elif key == curses.KEY_UP:
+                selected_idx -= 1
+                if selected_idx < 0:
+                    selected_idx = len(current_menu) - 1
+
+            elif key == curses.KEY_DOWN:
+                selected_idx += 1
+                if selected_idx >= len(current_menu):
+                    selected_idx = 0
+
+            elif key == curses.KEY_ENTER or key in [10, 13]:
+                choice_text = current_menu[selected_idx].text
+                current_menu, selected_idx = handle_menu_choice(
+                    stdscr,
+                    choice_text,
+                    current_menu,
+                    selected_idx,
+                    top_level_menu,
+                    help_submenu,
+                )
+
+            elif str(chr(key)).isdigit():
+                digit = int(chr(key)) - 1
+                if 0 <= digit < len(current_menu):
+                    selected_idx = digit
+        except KeyboardInterrupt:
             break
-
-        elif key == curses.KEY_UP:
-            selected_idx -= 1
-            if selected_idx < 0:
-                selected_idx = len(current_menu) - 1
-
-        elif key == curses.KEY_DOWN:
-            selected_idx += 1
-            if selected_idx >= len(current_menu):
-                selected_idx = 0
-
-        elif key == curses.KEY_ENTER or key in [10, 13]:
-            choice_text = current_menu[selected_idx].text
-            current_menu, selected_idx = handle_menu_choice(
-                stdscr,
-                choice_text,
-                current_menu,
-                selected_idx,
-                top_level_menu,
-                help_submenu
-            )
-
-        elif str(chr(key)).isdigit():
-            digit = int(chr(key)) - 1
-            if 0 <= digit < len(current_menu):
-                selected_idx = digit
 
 
 curses.wrapper(main)
