@@ -4,6 +4,7 @@ import sys
 from loguru import logger
 
 import utils_ktru
+import utils_data
 
 MENU_BACK = "Назад"
 MENU_MAIN = "Главная"
@@ -55,6 +56,20 @@ def handle_menu_choice(
         except Exception as e:
             logger.error(f"Ошибка запуска программы КТРУ: {e}")
             print(f"Ошибка запуска программы: {e}")
+        # После завершения программы возвращаемся в меню
+        return top_level_menu, 0
+    elif choice_text == "Запрос производителя по ОКПД":
+        logger.info("Запуск запроса производителя по ОКПД")
+        # Запуск программы src/utils_data.py с запросом ОКПД
+        curses.endwin()  # Завершаем curses перед запуском другой программы
+        try:
+            
+            # Создаем экземпляр и запрашиваем ОКПД
+            utils_data.processor()
+        except Exception as e:
+            logger.error(f"Ошибка при запросе производителя по ОКПД: {e}")
+            print(f"Ошибка: {e}")
+            input("Нажмите Enter для возврата в меню...")
         # После завершения программы возвращаемся в меню
         return top_level_menu, 0
     elif choice_text == "Справка":
@@ -112,6 +127,7 @@ def main(stdscr):
     # Создание пунктов меню верхнего уровня
     top_level_menu = [
         MenuItem("Запрос КТРУ"),
+        MenuItem("Запрос производителя по ОКПД"),
         MenuItem("Справка"),
         MenuItem("Выход"),
     ]
