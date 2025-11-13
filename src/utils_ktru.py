@@ -3,6 +3,8 @@
 
 import os
 import re
+from tkinter import filedialog
+from tkinter import Tk
 
 import pandas as pd
 import requests
@@ -149,15 +151,12 @@ class ZakupkiProcessor:
             ],
         )
 
-        # Запрос пути для сохранения файлов
-        while True:
-            output_dir = input(f"Введите путь для сохранения файлов (по умолчанию текущая папка): ").strip()
-            if not output_dir:
-                output_dir = "."
-            if os.path.isdir(output_dir):
-                break
-            else:
-                print(f"Папка '{output_dir}' не существует. Попробуйте снова.")
+        # Выбор пути для сохранения файлов через диалог
+        root = Tk()
+        root.withdraw()  # Скрываем основное окно
+        output_dir = filedialog.askdirectory(title="Выберите папку для сохранения файлов")
+        if not output_dir:
+            output_dir = "."
 
         # Сохранение в файлы
         latex_file = os.path.join(output_dir, "tt.tex")
