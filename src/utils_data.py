@@ -6,11 +6,11 @@
 import datetime
 import os
 import sqlite3
-from pathlib import Path
 import time
-from loguru import logger
+from pathlib import Path
 
 import pandas as pd
+from loguru import logger
 
 
 class Ktru:
@@ -26,7 +26,6 @@ class Ktru:
         logger.info(f"Инициализирован класс Ktru({db_path})")
         self.init_database()
         self.pd_to_sql()
-        
 
     def init_database(self):
         """Создает таблицы базы данных если они не существуют"""
@@ -76,21 +75,29 @@ class Ktru:
         FROM logs
         WHERE tables=?
         """
-        time_file = datetime.datetime.fromtimestamp(int(self.get_data(file))) # получаем дату файла
+        time_file = datetime.datetime.fromtimestamp(
+            int(self.get_data(file))
+        )  # получаем дату файла
         with sqlite3.connect(self.db_path) as conn:
-            date_bd_row = conn.execute(sql_query, (table_name,)).fetchone() # получаем дату из базы данных
+            date_bd_row = conn.execute(
+                sql_query, (table_name,)
+            ).fetchone()  # получаем дату из базы данных
             if date_bd_row and date_bd_row[0]:
                 date_bd = datetime.datetime.strptime(
                     date_bd_row[0], "%Y-%m-%d %H:%M:%S"
                 )
             else:
-                date_bd = datetime.datetime(2020, 1, 1) # если дата не установлена, устанавливаем сами на 1 января 2020 г
+                date_bd = datetime.datetime(
+                    2020, 1, 1
+                )  # если дата не установлена, устанавливаем сами на 1 января 2020 г
 
-            if time_file > date_bd: # Если файл моложе, загружаем его в базу данных
+            if time_file > date_bd:  # Если файл моложе, загружаем его в базу данных
                 try:
                     logger.info(f"Загрузка файла {file}")
+                    print(f"Загрузка файла {file}")
                     wb = pd.read_excel(file, sheet_name=sheet_name, header=headers)
                     logger.info(f"Запись данных из файла {file} в базу данных")
+                    print(f"Запись данных из файла {file} в базу данных")
                     wb.to_sql(table_name, conn, index=True, if_exists="replace")
                     cursor = conn.cursor()
                     exect = f"CREATE INDEX IF NOT EXISTS idx_{table_name}_id ON {table_name}(ОГРН)"
@@ -114,14 +121,14 @@ class Ktru:
         self._load_pd("production.xlsx", "Продукция", "product", 2)
 
     def get_data(self, file):
-        '''
+        """
         Получаем дату создания файла в секундах
-        
+
         Args:
             file: Имя файла
         Returns:
             Объект datatime когда файл был создан
-        '''
+        """
         return os.stat(file).st_birthtime
 
     def get_okpd(self, okpd):
@@ -131,10 +138,14 @@ class Ktru:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT ОГРН, ОКПД2 
-                    FROM product 
-                    WHERE ОКПД2 = ? 
-                    GROUP By ОГРН
+                    SELECT 
+                        p."ОГРН",
+                        p."ОКПД2",
+                        COALESCE(e."Краткое наименование организации", 'нет данных') AS Результат
+                    FROM product p
+                    LEFT JOIN export e ON p."ОГРН" = e."ОГРН"
+                    WHERE p."ОКПД2" like ?
+                    GROUP BY p."ОГРН"
                     """,
                     (okpd,),
                 )
@@ -144,11 +155,31 @@ class Ktru:
             return []
 
 
+def processor() -> None:
+    """Основная функция обработки КТРУ с пользовательским вводом"""
+    print("Инициализация базы данных")
+    processor_instance = Ktru()
+    print("Введите номер ОКПД2 вида 26.20.15.000 (возможен ввод подстановочных знаков)")
+    print("для укрупненного вывода ОКПД2 примет вид 26.20.15.% или q для выхода")
+    while True:
+        okpd = input("введите ОКПД2 : ").strip()
+        logger.info(f"введено для поиска из базы данных: {okpd}")
+
+        if okpd.lower() == "q":
+            break
+
+        res = processor_instance.get_okpd(okpd)
+        print('№\tНаименование\tОГРН')
+        for n, r in enumerate(res, 1):
+            print(f"{n}\t{r['Результат']}\t{r['ОГРН']}")
+
+
+        
 def main():
     ktru = Ktru()
     res = ktru.get_okpd("26.20.15.000")
     for n, r in enumerate(res, 1):
-        print(f"{n} - {r['ОГРН']}")
+        print(f"{n} - {r=}")
 
 
 if __name__ == "__main__":
