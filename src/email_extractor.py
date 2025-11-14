@@ -7,7 +7,7 @@ import random
 import sys
 import time
 from typing import Any, List, Literal, Optional, Dict
-
+from loguru import logger
 import requests
 from bs4 import BeautifulSoup
 
@@ -31,10 +31,6 @@ class EmailExtractor:
             config_path: Путь к файлу конфигурации
         """
         self.config = load_config(config_path)
-        self.logger = setup_logging(
-            self.config.get('logging', {}).get('level', 'INFO'),
-            self.config.get('logging', {}).get('file')
-        )
         self.db = EmailDatabase(self.config.get('database', {
                                 }).get('path', 'data/database/emails.db'))
         self.stats = ExtractionStats()
@@ -102,21 +98,21 @@ class EmailExtractor:
                 )
                 response.raise_for_status()
 
-                self.logger.debug("Успешно загружена страница: %s", url)
+                logger.debug("Успешно загружена страница: %s", url)
                 return response.text
 
             except requests.exceptions.RequestException as e:
-                self.logger.warning(
+                logger.warning(
                     "Попытка %s/%s не удалась для %s: %s", attempt + 1, max_retries, url, e)
 
                 if attempt < max_retries - 1:
                     # Экспоненциальная задержка между попытками
                     delay = 2 ** attempt
-                    self.logger.info(
+                    logger.info(
                         "Ожидание %s секунд перед повторной попыткой...", delay)
                     time.sleep(delay)
                 else:
-                    self.logger.error(
+                    logger.error(
                         "Не удалось загрузить страницу %s после %s попыток", url, max_retries)
 
         return None
@@ -184,11 +180,11 @@ class EmailExtractor:
             valid_emails = validate_emails(emails)
             unique_emails = sorted(list(set(valid_emails)))
 
-            self.logger.info("Найдено %s уникальных email-адресов на %s", len(unique_emails), url)
+            logger.info("Найдено %s уникальных email-адресов на %s", len(unique_emails), url)
             return company, unique_emails
 
         except Exception as e:
-            self.logger.error("Ошибка при извлечении email с %s: %s", url, e)
+            logger.error("Ошибка при извлечении email с %s: %s", url, e)
             return company, []
 
     def process_single_url(self, url: str, category: Optional[str] = None, company: Optional[str] = None) -> List[str]:
@@ -203,7 +199,7 @@ class EmailExtractor:
         Returns:
             Список найденных email-адресов
         """
-        self.logger.info("Обработка URL: %s", url)
+        logger.info("Обработка URL: %s", url)
 
         # Извлекаем email-адреса
         company, emails = self.extract_emails_from_webpage(url)
@@ -232,12 +228,12 @@ class EmailExtractor:
         Returns:
             Список всех найденных email-адресов
         """
-        self.logger.info("Обработка категории: %s", category_name)
+        logger.info("Обработка категории: %s", category_name)
 
         # Загружаем URL из файла
         urls = read_urls_from_file(urls_file)
         if not urls:
-            self.logger.warning("Не найдено URL в файле: %s", urls_file)
+            logger.warning("Не найдено URL в файле: %s", urls_file)
             return []
 
         self.stats.add_category(category_name, len(urls))
@@ -258,7 +254,7 @@ class EmailExtractor:
                     time.sleep(delay)
 
             except Exception as e:
-                self.logger.error("Ошибка при обработке URL %s: %s", url, e)
+                logger.error("Ошибка при обработке URL %s: %s", url, e)
                 self.stats.update_extraction(category_name, False)
 
         # Удаляем дубликаты
@@ -276,7 +272,7 @@ class EmailExtractor:
             len(unique_emails), duration
         )
 
-        self.logger.info(
+        logger.info(
             "Категория %s обработана. Найдено %s уникальных email-адресов",
              category_name, len(unique_emails))
         return unique_emails
@@ -296,7 +292,7 @@ class EmailExtractor:
             urls_file = category['urls_file']
             output_file = category.get('output_file')
 
-            self.logger.info("Начинаем обработку категории: %s", category_name)
+            logger.info("Начинаем обработку категории: %s", category_name)
             emails = self.process_category(category_name, urls_file, output_file)
             results[category_name] = emails
 
