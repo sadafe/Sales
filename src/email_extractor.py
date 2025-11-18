@@ -6,18 +6,18 @@ import argparse
 import random
 import sys
 import time
-from typing import Any, List, Literal, Optional, Dict
-from loguru import logger
+from typing import Any, Dict, List, Literal, Optional
+
 import requests
 from bs4 import BeautifulSoup
+from loguru import logger
 
 from .database import EmailDatabase
-from .utils import (
-    is_good_proxy, setup_logging, load_config, validate_emails, proxy_from_url,
-    get_random_user_agent, normalize_url, extract_emails_from_text,
-    load_proxies, get_random_proxy, read_urls_from_file,
-    save_emails_to_file, ExtractionStats, print_progress
-)
+from .utils import (ExtractionStats, extract_emails_from_text,
+                    get_random_proxy, get_random_user_agent, is_good_proxy,
+                    load_config, load_proxies, normalize_url, print_progress,
+                    proxy_from_url, read_urls_from_file, save_emails_to_file,
+                    setup_logging, validate_emails)
 
 
 class EmailExtractor:

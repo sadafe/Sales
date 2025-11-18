@@ -3,11 +3,11 @@
 TODO: Переделать модуль для работы без базы данных и в составе главного модуля
 """
 
-import sqlite3
 import logging
+import sqlite3
 from datetime import datetime
-from typing import List, Optional, Dict, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 
 class EmailDatabase:

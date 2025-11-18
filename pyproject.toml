@@ -33,6 +33,8 @@ dependencies = [
     "openpyxl>=3.1.5",
     "jinja2>=3.1.6",
     "loguru>=0.7.3",
+    "pylint>=3.2.7",
+    "vulture>=2.14",
 ]
 
 [project.optional-dependencies]

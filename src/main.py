@@ -1,6 +1,7 @@
 import curses
 
 from loguru import logger
+
 import utils_data
 import utils_ktru
 

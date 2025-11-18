@@ -1,19 +1,20 @@
 """
 Утилиты для Email Extractor
 """
-import re
 import random
+import re
+import socket
 import time
-from loguru import logger
-from proxy_information import ProxyInformation
-import requests
 import urllib.error
 import urllib.request
-import socket
-from typing import List, Optional, Dict, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import requests
 import yaml
 from fake_useragent import UserAgent
+from loguru import logger
+from proxy_information import ProxyInformation
 
 
 def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
