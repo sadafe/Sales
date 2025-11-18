@@ -27,7 +27,7 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     Returns:
         None (настраивает глобальный логгер loguru)
     """
-    from loguru import logger
+    
 
     # Очищаем существующие обработчики
     logger.remove()

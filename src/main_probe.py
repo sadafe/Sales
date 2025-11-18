@@ -2,6 +2,7 @@ import curses
 from curses import wrapper
 
 from loguru import logger
+import utils_data
 import utils_ktru
 import utils
 
@@ -29,7 +30,6 @@ def cleanup():
 def display_menu(menu_items, selected_idx):
     """Отображает меню с заданными пунктами"""
     stdscr.clear()
-    stdscr.addstr(f"{logger._core.handlers}\n")
     for idx, item in enumerate(menu_items):
         if idx == selected_idx:
             stdscr.addstr(f"> {item}\n")
@@ -81,12 +81,13 @@ def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
 
 
 def main_menu():
-    menu_items = ["КТРУ", "Email", "Помощь", "Выход"]
+    menu_items = ["КТРУ", "ОКПД2","Email", "Помощь", "Выход"]
     callback_map = {
         0: ktru_menu,
-        1: products_menu,
-        2: help_menu,
-        3: exit_menu,  # Для выхода ничего не делаем
+        1: okpd_menu,
+        2: email_menu,
+        3: help_menu,
+        4: exit_menu,
     }
     select_from_menu(menu_items, callback_map, 0)
 
@@ -103,11 +104,22 @@ def help_menu():
 def ktru_menu():
         curses.endwin()  # Завершаем curses перед запуском другой программы
         try:
+            logger.debug("Запускаем модуль КТРУ ")
             utils_ktru.processor()
             logger.debug("Модуль КТРУ успешно завершен")
         except Exception as e:
             logger.error(f"Ошибка запуска программы КТРУ: {e}")
             print(f"Ошибка запуска программы: {e}")
+
+def okpd_menu():
+    curses.endwin()  # Завершаем curses перед запуском другой программы
+    try:
+        logger.debug("Запускаем модуль ОКПД ")
+        utils_data.processor()
+        logger.debug("Модуль ОКПД успешно завершен")
+    except Exception as e:
+        logger.error(f"Ошибка запуска программы ОКПД: {e}")
+        print(f"Ошибка запуска программы: {e}")    
 
 def users_menu():
     menu_items = ["Добавить пользователя", "Удалить пользователя", "Назад"]
@@ -119,7 +131,7 @@ def users_menu():
     select_from_menu(menu_items, callback_map, 0)
 
 
-def products_menu():
+def email_menu():
     menu_items = ["Добавить продукт", "Удалить продукт", "Назад"]
     callback_map = {
         0: add_product,
@@ -200,6 +212,3 @@ def main(stdscr):
         main_menu()
     finally:
         cleanup()
-
-
-# wrapper(main)

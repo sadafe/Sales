@@ -4,11 +4,11 @@
 import os
 import re
 from tkinter import Tk, filedialog
-from loguru import logger
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from loguru import logger
 
 KTRU_PATTERN = r"\d{2}\.\d{2}\.\d{2}\.\d{3}-\d{8}"
 
@@ -117,7 +117,7 @@ class ZakupkiProcessor:
         if not value:
             raise ValueError("Версия КТРУ пуста")
         logger.debug(f"версия КТРУ {value}")
-        
+
         return str(value)
 
     def process_data(self) -> None:
@@ -191,7 +191,6 @@ def processor() -> None:
     # logger.remove()
     while True:
         ktru_input = input("введите КТРУ вида 26.20.15.000-00000024: ").strip()
-        print(logger._core.handlers)
         logger.debug(f"введено для поиска: {ktru_input}")
 
         if ktru_input.lower() == "q":
