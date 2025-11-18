@@ -1,6 +1,7 @@
 """
 Утилиты для Email Extractor
 """
+
 import random
 import re
 import socket
@@ -28,7 +29,6 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     Returns:
         None (настраивает глобальный логгер loguru)
     """
-    
 
     # Очищаем существующие обработчики
     logger.remove()
@@ -46,11 +46,7 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        logger.add(
-            log_path,
-            level=log_level.upper(),
-            encoding='utf-8'
-        )
+        logger.add(log_path, level=log_level.upper(), encoding="utf-8")
 
 
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
@@ -64,11 +60,10 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
         Словарь с конфигурацией
     """
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
         if not isinstance(config, dict):
-            logger.error(
-                "Конфигурация не является словарем: %s", type(config))
+            logger.error("Конфигурация не является словарем: %s", type(config))
             return {}
         return config or {}
     except FileNotFoundError:
@@ -126,13 +121,13 @@ def get_random_user_agent() -> str:
     except Exception:
         # Fallback список User-Agent
         user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1',
-            'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
         ]
         return random.choice(user_agents)
 
@@ -151,8 +146,8 @@ def normalize_url(url: str) -> str:
         return url
 
     url = url.strip()
-    if not url.startswith(('http://', 'https://')):
-        return 'https://' + url
+    if not url.startswith(("http://", "https://")):
+        return "https://" + url
     return url
 
 
@@ -170,7 +165,7 @@ def extract_emails_from_text(text: str) -> List[str]:
         return []
 
     # Улучшенное регулярное выражение для поиска email
-    email_pattern = r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b'
+    email_pattern = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
     emails = re.findall(email_pattern, text)
 
     # Фильтруем только валидные email
@@ -178,7 +173,7 @@ def extract_emails_from_text(text: str) -> List[str]:
 
 
 def norm_dict_url(proxy_list: List[str]) -> List[Dict[str, str]]:
-    ''' приведение списка прокси к словарю
+    """приведение списка прокси к словарю
 
     Args:
         proxy_file: список прокси
@@ -186,22 +181,19 @@ def norm_dict_url(proxy_list: List[str]) -> List[Dict[str, str]]:
     Returns:
         Список словарей с прокси
 
-    '''
+    """
     proxies = []
     lines = proxy_list
     for line in lines:
-        if line and not line.startswith('#'):
+        if line and not line.startswith("#"):
             # Поддерживаем разные форматы прокси
-            if '://' in line:
+            if "://" in line:
                 http_line = line
-                https_line = line.replace('https://', 'http://', 1)
-                proxies.append({'http': http_line, 'https': https_line})
+                https_line = line.replace("https://", "http://", 1)
+                proxies.append({"http": http_line, "https": https_line})
             else:
                 # Если указан только IP:PORT, добавляем протокол
-                proxies.append({
-                    'http': f'http://{line}',
-                    'https': f'https://{line}'
-                })
+                proxies.append({"http": f"http://{line}", "https": f"https://{line}"})
     return proxies
 
 
@@ -225,24 +217,24 @@ def proxy_from_url(url: str) -> List[Dict[str, str]]:
 
 
 def searh_russia(dict_json):
-    '''
+    """
     Возвращает список русских прокси
-    
+
     Args:
         Json: список с прокси
 
     Returns:
         Список прокси
-    '''
+    """
     list_russia = []
 
     for lin in dict_json:
         try:
-            if lin['location']['country'] == 'Russia':
+            if lin["location"]["country"] == "Russia":
                 add_url = norm_dict_url([f"{lin['ip']}:{lin['port']}"])
                 list_russia.extend(add_url)
         except Exception as e:
-            logger.error('Ошибка в поиске русских прокси %s', e)
+            logger.error("Ошибка в поиске русских прокси %s", e)
     return list_russia
 
 
@@ -258,7 +250,7 @@ def load_proxies(proxy_file: str) -> List[Dict[str, str]]:
     """
     lines = []
     try:
-        with open(proxy_file, 'r', encoding='utf-8') as f:
+        with open(proxy_file, "r", encoding="utf-8") as f:
             lines = [line.rstrip() for line in f]
 
     except FileNotFoundError:
@@ -280,21 +272,18 @@ def load_proxies_generator(proxy_file: str):
         Словарь прокси
     """
     try:
-        with open(proxy_file, 'r', encoding='utf-8') as f:
+        with open(proxy_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.rstrip()
-                if line and not line.startswith('#'):
+                if line and not line.startswith("#"):
                     # Поддерживаем разные форматы прокси
-                    if '://' in line:
+                    if "://" in line:
                         http_line = line
-                        https_line = line.replace('https://', 'http://', 1)
-                        yield {'http': http_line, 'https': https_line}
+                        https_line = line.replace("https://", "http://", 1)
+                        yield {"http": http_line, "https": https_line}
                     else:
                         # Если указан только IP:PORT, добавляем протокол
-                        yield {
-                            'http': f'http://{line}',
-                            'https': f'https://{line}'
-                        }
+                        yield {"http": f"http://{line}", "https": f"https://{line}"}
     except FileNotFoundError:
         logger.warning("Файл прокси %s не найден", proxy_file)
     except Exception as e:
@@ -303,15 +292,15 @@ def load_proxies_generator(proxy_file: str):
 
 def is_bad_proxy(pip):
     try:
-        proxy_handler = urllib.request.ProxyHandler({'http': pip})
+        proxy_handler = urllib.request.ProxyHandler({"http": pip})
         opener = urllib.request.build_opener(proxy_handler)
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        opener.addheaders = [("User-agent", "Mozilla/5.0")]
         urllib.request.install_opener(opener)
         # change the URL to test here
-        req = urllib.request.Request('https://www.example.com')
+        req = urllib.request.Request("https://www.example.com")
         sock = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
-        print('Error code: ', e.code)
+        print("Error code: ", e.code)
         return e.code
     except Exception as detail:
         logger.error("ERROR: %s", detail)
@@ -321,10 +310,10 @@ def is_bad_proxy(pip):
 
 def is_proxy(pip):
     checker = ProxyInformation()
-    proxy_info = checker.check_proxy(pip['http'].split('//')[1])
+    proxy_info = checker.check_proxy(pip["http"].split("//")[1])
 
     if isinstance(proxy_info, dict):
-        return proxy_info.get('status', False)
+        return proxy_info.get("status", False)
     return False
 
 
@@ -332,7 +321,7 @@ def is_good_proxy(proxy_file):
     socket.setdefaulttimeout(120)
     proxy_list = proxy_file
     for current_proxy in proxy_list[:]:
-        if is_bad_proxy(current_proxy['http']) or not is_proxy(current_proxy):
+        if is_bad_proxy(current_proxy["http"]) or not is_proxy(current_proxy):
             proxy_list.remove(current_proxy)
 
     return proxy_list
@@ -364,7 +353,7 @@ def read_urls_from_file(file_path: str) -> List[str]:
         Список URL
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             result: List[str] = []
             for raw_line in f:
                 line = raw_line.strip()
@@ -372,20 +361,23 @@ def read_urls_from_file(file_path: str) -> List[str]:
                     continue
 
                 # Если строка уже выглядит как URL — оставляем как есть (с нормализацией)
-                if line.startswith(
-                        ('http://', 'https://')) or '://' in line or line.startswith('www.'):
+                if (
+                    line.startswith(("http://", "https://"))
+                    or "://" in line
+                    or line.startswith("www.")
+                ):
                     result.append(normalize_url(line))
                     continue
 
                 # Ожидаем формат: "число,число"
-                if ',' in line:
-                    first, second = line.split(',', 1)
-                    first = first.strip().strip('"\'')
-                    second = second.strip().strip('"\'')
+                if "," in line:
+                    first, second = line.split(",", 1)
+                    first = first.strip().strip("\"'")
+                    second = second.strip().strip("\"'")
 
                     # Берем только цифры на всякий случай
-                    first_digits = re.sub(r'\D', '', first)
-                    second_digits = re.sub(r'\D', '', second)
+                    first_digits = re.sub(r"\D", "", first)
+                    second_digits = re.sub(r"\D", "", second)
 
                     if len(first_digits) == 13:
                         # https://companium.ru/id/<13-значное>/contacts
@@ -400,8 +392,7 @@ def read_urls_from_file(file_path: str) -> List[str]:
                         continue
 
                 # Если формат не распознан — логируем и пропускаем
-                logger.warning(
-                    "Строка не распознана как валидная запись CSV: %s", line)
+                logger.warning("Строка не распознана как валидная запись CSV: %s", line)
 
             return result
     except FileNotFoundError:
@@ -427,9 +418,9 @@ def save_emails_to_file(emails: List[str], output_file: str) -> bool:
         output_path = Path(output_file)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             for email in emails:
-                f.write(email + '\n')
+                f.write(email + "\n")
 
         logger.debug("Сохранено %s email-адресов в файл: %s", len(emails), output_file)
         return True
@@ -474,10 +465,13 @@ def print_progress(current: int, total: int, prefix: str = "Прогресс") -
     percentage = (current / total) * 100
     bar_length = 30
     filled_length = int(bar_length * current // total)
-    baris = '█' * filled_length + '-' * (bar_length - filled_length)
+    baris = "█" * filled_length + "-" * (bar_length - filled_length)
 
-    print(f'\r{prefix}: |{baris}| {current}/{total} ({percentage:.1f}%)',
-          end='', flush=True)
+    print(
+        f"\r{prefix}: |{baris}| {current}/{total} ({percentage:.1f}%)",
+        end="",
+        flush=True,
+    )
 
     if current == total:
         print()  # Новая строка в конце
@@ -497,10 +491,10 @@ class ExtractionStats:
     def add_category(self, category: str, urls_count: int):
         """Добавляет категорию для отслеживания"""
         self.categories[category] = {
-            'urls': urls_count,
-            'successful': 0,
-            'failed': 0,
-            'emails': 0
+            "urls": urls_count,
+            "successful": 0,
+            "failed": 0,
+            "emails": 0,
         }
 
     def update_extraction(self, category: str, success: bool, emails_count: int = 0):
@@ -509,12 +503,12 @@ class ExtractionStats:
             self.successful_extractions += 1
             self.total_emails_found += emails_count
             if category in self.categories:
-                self.categories[category]['successful'] += 1
-                self.categories[category]['emails'] += emails_count
+                self.categories[category]["successful"] += 1
+                self.categories[category]["emails"] += emails_count
         else:
             self.failed_extractions += 1
             if category in self.categories:
-                self.categories[category]['failed'] += 1
+                self.categories[category]["failed"] += 1
 
     def get_duration(self) -> float:
         """Возвращает продолжительность выполнения"""
@@ -524,9 +518,9 @@ class ExtractionStats:
         """Выводит сводную статистику"""
         duration = self.get_duration()
 
-        print(f"\n{'='*50}")
+        print(f"\n{'=' * 50}")
         print("СТАТИСТИКА ИЗВЛЕЧЕНИЯ EMAIL-АДРЕСОВ")
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")
         print(f"Время выполнения: {format_duration(duration)}")
         print(f"Всего URL обработано: {self.total_urls}")
         print(f"Успешных извлечений: {self.successful_extractions}")
@@ -537,8 +531,12 @@ class ExtractionStats:
             print("\nСтатистика по категориям:")
             for category, stats in self.categories.items():
                 success_rate = (
-                    stats['successful'] / stats['urls'] * 100) if stats['urls'] > 0 else 0
+                    (stats["successful"] / stats["urls"] * 100)
+                    if stats["urls"] > 0
+                    else 0
+                )
                 print(
-                    f"  {category}: {stats['successful']}/{stats['urls']} ({success_rate:.1f}%) - {stats['emails']} email")
+                    f"  {category}: {stats['successful']}/{stats['urls']} ({success_rate:.1f}%) - {stats['emails']} email"
+                )
 
-        print(f"{'='*50}")
+        print(f"{'=' * 50}")

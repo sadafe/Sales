@@ -32,7 +32,7 @@ class EmailDatabase:
                 cursor = conn.cursor()
 
                 # Таблица компаний
-                cursor.execute('''
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS companies (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         url TEXT UNIQUE NOT NULL,
@@ -41,10 +41,10 @@ class EmailDatabase:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                ''')
+                """)
 
                 # Таблица email-адресов
-                cursor.execute('''
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS emails (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         email TEXT UNIQUE NOT NULL,
@@ -54,10 +54,10 @@ class EmailDatabase:
                         source_url TEXT,
                         FOREIGN KEY (company_id) REFERENCES companies (id)
                     )
-                ''')
+                """)
 
                 # Таблица статистики
-                cursor.execute('''
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS extraction_stats (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         category TEXT,
@@ -67,15 +67,18 @@ class EmailDatabase:
                         extraction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         duration_seconds REAL
                     )
-                ''')
+                """)
 
                 # Индексы для улучшения производительности
                 cursor.execute(
-                    'CREATE INDEX IF NOT EXISTS idx_emails_company_id ON emails(company_id)')
+                    "CREATE INDEX IF NOT EXISTS idx_emails_company_id ON emails(company_id)"
+                )
                 cursor.execute(
-                    'CREATE INDEX IF NOT EXISTS idx_emails_extracted_at ON emails(extracted_at)')
+                    "CREATE INDEX IF NOT EXISTS idx_emails_extracted_at ON emails(extracted_at)"
+                )
                 cursor.execute(
-                    'CREATE INDEX IF NOT EXISTS idx_companies_category ON companies(category)')
+                    "CREATE INDEX IF NOT EXISTS idx_companies_category ON companies(category)"
+                )
 
                 conn.commit()
                 self.logger.info("База данных инициализирована успешно")
@@ -84,7 +87,12 @@ class EmailDatabase:
             self.logger.error("Ошибка при инициализации базы данных: %s", e)
             raise
 
-    def add_company(self, url: str, category: Optional[str] = None, company_name: Optional[str] = None) -> int | None:
+    def add_company(
+        self,
+        url: str,
+        category: Optional[str] = None,
+        company_name: Optional[str] = None,
+    ) -> int | None:
         """
         Добавляет компанию в базу данных
 
@@ -99,17 +107,22 @@ class EmailDatabase:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute(
+                    """
                     INSERT OR REPLACE INTO companies (url, category, company_name, last_checked)
                     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ''', (url, category, company_name))
+                """,
+                    (url, category, company_name),
+                )
                 conn.commit()
                 return cursor.lastrowid
         except sqlite3.Error as e:
             self.logger.error("Ошибка при добавлении компании %s: %s", url, e)
             return -1
 
-    def add_emails(self, emails: List[str], company_id: int, source_url: Optional[str] = None) -> int:
+    def add_emails(
+        self, emails: List[str], company_id: int, source_url: Optional[str] = None
+    ) -> int:
         """
         Добавляет email-адреса в базу данных
 
@@ -131,18 +144,20 @@ class EmailDatabase:
 
                 for email in emails:
                     try:
-                        cursor.execute('''
+                        cursor.execute(
+                            """
                             INSERT OR IGNORE INTO emails (email, company_id, source_url)
                             VALUES (?, ?, ?)
-                        ''', (email, company_id, source_url))
+                        """,
+                            (email, company_id, source_url),
+                        )
                         if cursor.rowcount > 0:
                             added_count += 1
                     except sqlite3.Error:
                         continue
 
                 conn.commit()
-                self.logger.info(
-                    "Добавлено %s новых email-адресов", added_count)
+                self.logger.info("Добавлено %s новых email-адресов", added_count)
                 return added_count
 
         except sqlite3.Error as e:
@@ -163,17 +178,21 @@ class EmailDatabase:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute(
+                    """
                     SELECT e.email, e.extracted_at, c.url, c.company_name
                     FROM emails e
                     JOIN companies c ON e.company_id = c.id
                     WHERE c.category = ?
                     ORDER BY e.extracted_at DESC
-                ''', (category,))
+                """,
+                    (category,),
+                )
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
             self.logger.error(
-                "Ошибка при получении email-адресов для категории %s: %s", category, e)
+                "Ошибка при получении email-адресов для категории %s: %s", category, e
+            )
             return []
 
     def get_all_emails(self) -> List[Dict[str, Any]]:
@@ -187,20 +206,25 @@ class EmailDatabase:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute("""
                     SELECT e.email, e.extracted_at, c.url, c.company_name, c.category
                     FROM emails e
                     JOIN companies c ON e.company_id = c.id
                     ORDER BY e.extracted_at DESC
-                ''')
+                """)
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
             self.logger.error("Ошибка при получении всех email-адресов: %s", e)
             return []
 
-    def save_extraction_stats(self, category: str, total_urls: int,
-                              successful_extractions: int, total_emails_found: int,
-                              duration_seconds: float) -> None:
+    def save_extraction_stats(
+        self,
+        category: str,
+        total_urls: int,
+        successful_extractions: int,
+        total_emails_found: int,
+        duration_seconds: float,
+    ) -> None:
         """
         Сохраняет статистику извлечения
 
@@ -214,16 +238,27 @@ class EmailDatabase:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute(
+                    """
                     INSERT INTO extraction_stats 
                     (category, total_urls, successful_extractions, total_emails_found, duration_seconds)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (category, total_urls, successful_extractions, total_emails_found, duration_seconds))
+                """,
+                    (
+                        category,
+                        total_urls,
+                        successful_extractions,
+                        total_emails_found,
+                        duration_seconds,
+                    ),
+                )
                 conn.commit()
         except sqlite3.Error as e:
             self.logger.error("Ошибка при сохранении статистики: %s", e)
 
-    def get_extraction_stats(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_extraction_stats(
+        self, category: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Получает статистику извлечения
 
@@ -239,16 +274,19 @@ class EmailDatabase:
                 cursor = conn.cursor()
 
                 if category:
-                    cursor.execute('''
+                    cursor.execute(
+                        """
                         SELECT * FROM extraction_stats 
                         WHERE category = ?
                         ORDER BY extraction_date DESC
-                    ''', (category,))
+                    """,
+                        (category,),
+                    )
                 else:
-                    cursor.execute('''
+                    cursor.execute("""
                         SELECT * FROM extraction_stats 
                         ORDER BY extraction_date DESC
-                    ''')
+                    """)
 
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
@@ -270,10 +308,12 @@ class EmailDatabase:
                 cursor = conn.cursor()
 
                 # Удаляем старые записи статистики
-                cursor.execute('''
+                cursor.execute(
+                    """
                     DELETE FROM extraction_stats 
                     WHERE extraction_date < datetime('now', '-{} days')
-                '''.format(days))
+                """.format(days)
+                )
 
                 deleted_count = cursor.rowcount
                 conn.commit()
