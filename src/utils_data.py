@@ -8,6 +8,7 @@ import os
 import sqlite3
 import time
 from pathlib import Path
+from tkinter import Tk, filedialog
 
 import pandas as pd
 from loguru import logger
@@ -131,27 +132,27 @@ class Ktru:
         """
         return os.stat(file).st_birthtime
 
-    def get_okpd(self, okpd):
+    def get_okpd(self, okpd_number, okpd_name):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-                cursor.execute(
-                    """
+                execst = f"""
                     SELECT 
                         p."ОГРН",
                         p."ОКПД2",
-                        COALESCE(e."Краткое наименование организации", 'нет данных') AS Результат
+                        COALESCE(e."Краткое наименование организации", 'нет данных в базе') AS Результат,
+                        p."Наименование продукции"
                     FROM product p
                     LEFT JOIN export e ON p."ОГРН" = e."ОГРН"
-                    WHERE p."ОКПД2" like ?
-                    GROUP BY p."ОГРН"
-                    """,
-                    (okpd,),
+                    WHERE p."Наименование продукции" like "%{okpd_name}%" AND p."ОКПД2" like "%{okpd_number}%"
+                    """
+                cursor.execute(
+                    execst,
                 )
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
-            print(f"Ошибка при получении ОКПД {okpd} из базы данных : {e}")
+            print(f"Ошибка при получении ОКПД {okpd_number} из базы данных : {e}")
             return []
 
 
@@ -159,25 +160,60 @@ def processor() -> None:
     """Основная функция обработки КТРУ с пользовательским вводом"""
     print("Инициализация базы данных")
     processor_instance = Ktru()
-    print("Введите номер ОКПД2 вида 26.20.15.000 (возможен ввод подстановочных знаков)")
-    print("для укрупненного вывода ОКПД2 примет вид 26.20.15.% или q для выхода")
+    print('')
+    print("Программа ищет производителей по номеру ОКПД2 и(или) наименованию продукции")
+    print("если какой-либо параметр не важен, то оставьте поле ввода пустым")
+    print("Введите номер ОКПД2 вида ХХ.ХХ.ХХ.ХХХ ")
+    print("для укрупненного вывода ОКПД2 может принемать вид ХХ.ХХ.ХХ или q(й) для выхода")
     while True:
         okpd = input("введите ОКПД2 : ").strip()
         logger.debug(f"введено для поиска из базы данных: {okpd}")
 
-        if okpd.lower() == "q":
+        if okpd.lower() == "q" or okpd.lower() == "й":
             break
 
-        res = processor_instance.get_okpd(okpd)
-        print('№\tНаименование\tОГРН')
+        name = input("Введите название продукции")
+
+        res = processor_instance.get_okpd(okpd, name)
+        data_rows = []
+        print("№\tОГРН\tПроизводитель\tПродукция")
         for n, r in enumerate(res, 1):
-            print(f"{n}\t{r['Результат']}\t{r['ОГРН']}")
+            print(f"{n}\t{r['ОГРН']}\t{r['Результат']}\t{r['Наименование продукции']}")
+            data_rows.append(
+                [n, r["ОГРН"], r["Результат"], r["Наименование продукции"]]
+            )
+        save = input("Сохранить это все в файл? Y(Д)")
+        if save.lower() == "y" or save.lower() == "д":
+            df = pd.DataFrame(
+                data_rows,
+                columns=[
+                    "№",
+                    "ОГРН",
+                    "Производитель",
+                    "Продукция",
+                ],
+            )
+
+            # Выбор пути для сохранения файлов через диалог
+            root = Tk()
+            root.withdraw()  # Скрываем основное окно
+            output_dir = filedialog.askdirectory(
+                title="Выберите папку для сохранения файлов"
+            )
+            if not output_dir:
+                output_dir = "."
+
+            excel_file = os.path.join(output_dir, f"{name}{okpd}.xlsx")
+
+            logger.debug(f"Сохранение данных в файлы для ОКПД2 {okpd}")
+            df.to_excel(excel_file, sheet_name="Sheet1", index=False)
+            logger.debug(f"Файл успешно сохранен: {excel_file}")
 
 
-        
+
 def main():
     ktru = Ktru()
-    res = ktru.get_okpd("26.20.15.000")
+    res = ktru.get_okpd("26.20.15.000", "")
     for n, r in enumerate(res, 1):
         print(f"{n} - {r=}")
 

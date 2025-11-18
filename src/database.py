@@ -83,7 +83,7 @@ class EmailDatabase:
             self.logger.error("Ошибка при инициализации базы данных: %s", e)
             raise
 
-    def add_company(self, url: str, category: Optional[str] = None, company_name: Optional[str] = None) -> int:
+    def add_company(self, url: str, category: Optional[str] = None, company_name: Optional[str] = None) -> int | None:
         """
         Добавляет компанию в базу данных
 

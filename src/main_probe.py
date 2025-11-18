@@ -1,10 +1,9 @@
 import curses
-from curses import wrapper
 
 from loguru import logger
+
 import utils_data
 import utils_ktru
-import utils
 
 # Инициализация экрана
 
@@ -64,8 +63,8 @@ def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
                 selected_idx = 0
 
         if key == curses.KEY_ENTER or key in [10, 13, 459]:
-            key = (selected_idx+49)
-            
+            key = selected_idx + 49
+
         try:
             selected_item_idx = int(chr(key)) - 1
 
@@ -81,7 +80,7 @@ def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
 
 
 def main_menu():
-    menu_items = ["КТРУ", "ОКПД2","Email", "Помощь", "Выход"]
+    menu_items = ["КТРУ", "ОКПД2", "Email", "Помощь", "Выход"]
     callback_map = {
         0: ktru_menu,
         1: okpd_menu,
@@ -101,15 +100,17 @@ def help_menu():
     }
     select_from_menu(menu_items, callback_map, 0)
 
+
 def ktru_menu():
-        curses.endwin()  # Завершаем curses перед запуском другой программы
-        try:
-            logger.debug("Запускаем модуль КТРУ ")
-            utils_ktru.processor()
-            logger.debug("Модуль КТРУ успешно завершен")
-        except Exception as e:
-            logger.error(f"Ошибка запуска программы КТРУ: {e}")
-            print(f"Ошибка запуска программы: {e}")
+    curses.endwin()  # Завершаем curses перед запуском другой программы
+    try:
+        logger.debug("Запускаем модуль КТРУ ")
+        utils_ktru.processor()
+        logger.debug("Модуль КТРУ успешно завершен")
+    except Exception as e:
+        logger.error(f"Ошибка запуска программы КТРУ: {e}")
+        print(f"Ошибка запуска программы: {e}")
+
 
 def okpd_menu():
     curses.endwin()  # Завершаем curses перед запуском другой программы
@@ -119,7 +120,8 @@ def okpd_menu():
         logger.debug("Модуль ОКПД успешно завершен")
     except Exception as e:
         logger.error(f"Ошибка запуска программы ОКПД: {e}")
-        print(f"Ошибка запуска программы: {e}")    
+        print(f"Ошибка запуска программы: {e}")
+
 
 def users_menu():
     menu_items = ["Добавить пользователя", "Удалить пользователя", "Назад"]
@@ -180,6 +182,7 @@ def remove_product():
     stdscr.getch()  # Пауза перед возвратом
     stdscr.clear()
 
+
 def about():
     stdscr.clear()
     stdscr.addstr(
@@ -188,6 +191,7 @@ def about():
     stdscr.refresh()
     stdscr.getch()
     stdscr.clear()
+
 
 def hot_button():
     stdscr.clear()
@@ -200,6 +204,7 @@ def hot_button():
     )
     stdscr.refresh()
     stdscr.getch()
+
 
 def exit_menu():
     cleanup()
