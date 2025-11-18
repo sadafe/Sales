@@ -80,7 +80,13 @@ def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
 
 
 def main_menu():
-    menu_items = ["КТРУ", "ОКПД2", "Email", "Помощь", "Выход"]
+    menu_items = [
+        "Выгрузка характеристик из КТРУ",
+        "Поиск производителей по ОКПД2 и(или) наименованию",
+        "Email",
+        "Помощь",
+        "Выход",
+    ]
     callback_map = {
         0: ktru_menu,
         1: okpd_menu,

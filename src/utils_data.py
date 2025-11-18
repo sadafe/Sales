@@ -203,7 +203,7 @@ def processor() -> None:
             if not output_dir:
                 output_dir = "."
 
-            excel_file = os.path.join(output_dir, f"{name}{okpd}.xlsx")
+            excel_file = os.path.join(output_dir, f"{name} {okpd}.xlsx")
 
             logger.debug(f"Сохранение данных в файлы для ОКПД2 {okpd}")
             df.to_excel(excel_file, sheet_name="Sheet1", index=False)
