@@ -33,12 +33,12 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     logger.remove()
 
     # Добавляем обработчик для консоли
-    logger.add(
-        lambda msg: print(msg, end=""),
-        level=log_level.upper(),
-        format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
-        colorize=True
-    )
+    # logger.add(
+    #     lambda msg: print(msg, end=""),
+    #     level=log_level.upper(),
+    #     format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
+    #     colorize=True
+    # )
 
     # Обработчик для файла
     if log_file:
@@ -48,9 +48,6 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
         logger.add(
             log_path,
             level=log_level.upper(),
-            format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
-            rotation="1 MB",
-            retention="7 days",
             encoding='utf-8'
         )
 
@@ -433,8 +430,7 @@ def save_emails_to_file(emails: List[str], output_file: str) -> bool:
             for email in emails:
                 f.write(email + '\n')
 
-        logger.info("Сохранено %s email-адресов в файл: %s",
-                      len(emails), output_file)
+        logger.debug("Сохранено %s email-адресов в файл: %s", len(emails), output_file)
         return True
 
     except Exception as e:

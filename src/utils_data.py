@@ -23,13 +23,13 @@ class Ktru:
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Инициализирован класс Ktru({db_path})")
+        logger.debug(f"Инициализирован класс Ktru({db_path})")
         self.init_database()
         self.pd_to_sql()
 
     def init_database(self):
         """Создает таблицы базы данных если они не существуют"""
-        logger.info("Инициализация таблицы logs базы данных ")
+        logger.debug("Инициализация таблицы logs базы данных ")
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -93,10 +93,10 @@ class Ktru:
 
             if time_file > date_bd:  # Если файл моложе, загружаем его в базу данных
                 try:
-                    logger.info(f"Загрузка файла {file}")
+                    logger.debug(f"Загрузка файла {file}")
                     print(f"Загрузка файла {file}")
                     wb = pd.read_excel(file, sheet_name=sheet_name, header=headers)
-                    logger.info(f"Запись данных из файла {file} в базу данных")
+                    logger.debug(f"Запись данных из файла {file} в базу данных")
                     print(f"Запись данных из файла {file} в базу данных")
                     wb.to_sql(table_name, conn, index=True, if_exists="replace")
                     cursor = conn.cursor()
@@ -163,7 +163,7 @@ def processor() -> None:
     print("для укрупненного вывода ОКПД2 примет вид 26.20.15.% или q для выхода")
     while True:
         okpd = input("введите ОКПД2 : ").strip()
-        logger.info(f"введено для поиска из базы данных: {okpd}")
+        logger.debug(f"введено для поиска из базы данных: {okpd}")
 
         if okpd.lower() == "q":
             break

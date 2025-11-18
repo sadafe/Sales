@@ -1,15 +1,13 @@
 import curses
 
 from loguru import logger
-
-import utils_ktru
 import utils_data
+import utils_ktru
 
 MENU_BACK = "Назад"
 MENU_MAIN = "Главная"
 MENU_HELP = "Справка"
 MENU_EXIT = "Выход"
-logger.remove()
 
 
 class MenuItem:
@@ -46,23 +44,22 @@ def handle_menu_choice(
         tuple: (new_current_menu, new_selected_idx)
     """
     if choice_text == "Запрос КТРУ":
-        logger.info("Запуск модуля КТРУ")
+        logger.debug("Запуск модуля КТРУ")
         # Запуск программы src/utils_data.py
         curses.endwin()  # Завершаем curses перед запуском другой программы
         try:
             utils_ktru.processor()
-            logger.info("Модуль КТРУ успешно завершен")
+            logger.debug("Модуль КТРУ успешно завершен")
         except Exception as e:
             logger.error(f"Ошибка запуска программы КТРУ: {e}")
             print(f"Ошибка запуска программы: {e}")
         # После завершения программы возвращаемся в меню
         return top_level_menu, 0
     elif choice_text == "Запрос производителя по ОКПД":
-        logger.info("Запуск запроса производителя по ОКПД")
+        logger.debug("Запуск запроса производителя по ОКПД")
         # Запуск программы src/utils_data.py с запросом ОКПД
         curses.endwin()  # Завершаем curses перед запуском другой программы
         try:
-            
             # Создаем экземпляр и запрашиваем ОКПД
             utils_data.processor()
         except Exception as e:
@@ -123,6 +120,7 @@ def main(stdscr):
     top_level_menu = [
         MenuItem("Запрос КТРУ"),
         MenuItem("Запрос производителя по ОКПД"),
+        MenuItem("Работа с email"),
         MenuItem("Справка"),
         MenuItem("Выход"),
     ]

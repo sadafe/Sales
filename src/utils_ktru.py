@@ -57,7 +57,7 @@ class ZakupkiProcessor:
                 )
             ktru = input("введите КТРУ вида 26.20.15.000-00000024: ")
         self.ktru = ktru
-        logger.info(f"инициализация класса ZakupkiProcessor({ktru}) ")
+        logger.debug(f"инициализация класса ZakupkiProcessor({ktru}) ")
 
     def load_url(self, base_ktru: str, retries: int = 3) -> str:
         """
@@ -70,7 +70,7 @@ class ZakupkiProcessor:
         Returns:
             HTML-содержимое страницы
         """
-        logger.info(f"Загрузка данных в модуле ZakupkiProcessor.load_url({base_ktru})")
+        logger.debug(f"Загрузка данных в модуле ZakupkiProcessor.load_url({base_ktru})")
         ktru_url = f"{self.BASE_URL}{base_ktru}"
 
         for attempt in range(retries + 1):
@@ -104,18 +104,20 @@ class ZakupkiProcessor:
         Returns:
             Версия КТРУ
         """
-        logger.info(f"Получение версии КТРУ {self.ktru}")
+        logger.debug(f"Получение версии КТРУ {self.ktru}")
         ktru_url = f"/epz/ktru/ktruCard/ktru-description.html?itemId={self.ktru}"
         html_content = self.load_url(ktru_url)
         soup = BeautifulSoup(html_content, "html.parser")
         version_input = soup.find("input", {"id": "ktruItemVersionId"})
+
         if not version_input:
             raise ValueError("Не удалось найти версию КТРУ на странице")
-        # BeautifulSoup возвращает Tag объект, у которого есть .get() и ['key'] доступы
         value = version_input.get("value")  # type: ignore
+
         if not value:
             raise ValueError("Версия КТРУ пуста")
-        logger.info(f"версия КТРУ {value}")
+        logger.debug(f"версия КТРУ {value}")
+        
         return str(value)
 
     def process_data(self) -> None:
@@ -124,7 +126,7 @@ class ZakupkiProcessor:
         """
         ktru_version = self.get_ktru_version()
         url = f"/epz/ktru/ktruCard/ktru-part-description.html?itemVersionId={ktru_version}&page=1&recordsPerPage=5000&isTemplate=false&onlyRequired=false"
-        logger.info(f"Загрузка данных для КТРУ {self.ktru} с версии {ktru_version}")
+        logger.debug(f"Загрузка данных для КТРУ {self.ktru} с версии {ktru_version}")
         html_content = self.load_url(url)
 
         soup = BeautifulSoup(html_content, "html.parser")
@@ -172,7 +174,7 @@ class ZakupkiProcessor:
         excel_file = os.path.join(output_dir, f"{self.ktru}.xlsx")
         docx_file = os.path.join(output_dir, f"{self.ktru}.docx")
 
-        logger.info(f"Сохранение данных в файлы для КТРУ {self.ktru}")
+        logger.debug(f"Сохранение данных в файлы для КТРУ {self.ktru}")
         df.to_latex(
             latex_file, index=False, column_format="|l|c|c|", header=True, multirow=True
         )
@@ -180,15 +182,17 @@ class ZakupkiProcessor:
 
         os.system(f"pandoc.exe -s -f latex {latex_file} -o {docx_file}")
         os.remove(latex_file)
-        logger.info(f"Файлы успешно сохранены: {excel_file}, {docx_file}")
+        logger.debug(f"Файлы успешно сохранены: {excel_file}, {docx_file}")
 
 
 def processor() -> None:
     """Основная функция обработки КТРУ с пользовательским вводом"""
     print("Введите КТРУ или q для выхода")
+    # logger.remove()
     while True:
         ktru_input = input("введите КТРУ вида 26.20.15.000-00000024: ").strip()
-        logger.info(f'введено для поиска: {ktru_input}')
+        print(logger._core.handlers)
+        logger.debug(f"введено для поиска: {ktru_input}")
 
         if ktru_input.lower() == "q":
             break
@@ -197,7 +201,7 @@ def processor() -> None:
             processor_instance = ZakupkiProcessor(ktru_input)
             try:
                 processor_instance.process_data()
-                logger.info(f"Данные для КТРУ {ktru_input} успешно обработаны")
+                logger.debug(f"Данные для КТРУ {ktru_input} успешно обработаны")
                 break
             except Exception as e:
                 logger.error(f"Ошибка при обработке КТРУ {ktru_input}: {e}")

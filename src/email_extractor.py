@@ -108,8 +108,9 @@ class EmailExtractor:
                 if attempt < max_retries - 1:
                     # Экспоненциальная задержка между попытками
                     delay = 2 ** attempt
-                    logger.info(
-                        "Ожидание %s секунд перед повторной попыткой...", delay)
+                    logger.debug(
+                        "Ожидание %s секунд перед повторной попыткой...", delay
+                    )
                     time.sleep(delay)
                 else:
                     logger.error(
@@ -180,7 +181,9 @@ class EmailExtractor:
             valid_emails = validate_emails(emails)
             unique_emails = sorted(list(set(valid_emails)))
 
-            logger.info("Найдено %s уникальных email-адресов на %s", len(unique_emails), url)
+            logger.debug(
+                "Найдено %s уникальных email-адресов на %s", len(unique_emails), url
+            )
             return company, unique_emails
 
         except Exception as e:
@@ -199,7 +202,7 @@ class EmailExtractor:
         Returns:
             Список найденных email-адресов
         """
-        logger.info("Обработка URL: %s", url)
+        logger.debug("Обработка URL: %s", url)
 
         # Извлекаем email-адреса
         company, emails = self.extract_emails_from_webpage(url)
@@ -228,7 +231,7 @@ class EmailExtractor:
         Returns:
             Список всех найденных email-адресов
         """
-        logger.info("Обработка категории: %s", category_name)
+        logger.debug("Обработка категории: %s", category_name)
 
         # Загружаем URL из файла
         urls = read_urls_from_file(urls_file)
@@ -272,9 +275,11 @@ class EmailExtractor:
             len(unique_emails), duration
         )
 
-        logger.info(
+        logger.debug(
             "Категория %s обработана. Найдено %s уникальных email-адресов",
-             category_name, len(unique_emails))
+            category_name,
+            len(unique_emails),
+        )
         return unique_emails
 
     def process_all_categories(self) -> Dict[str, List[str]]:
@@ -292,7 +297,7 @@ class EmailExtractor:
             urls_file = category['urls_file']
             output_file = category.get('output_file')
 
-            logger.info("Начинаем обработку категории: %s", category_name)
+            logger.debug("Начинаем обработку категории: %s", category_name)
             emails = self.process_category(category_name, urls_file, output_file)
             results[category_name] = emails
 
