@@ -14,6 +14,11 @@ import pandas as pd
 from loguru import logger
 
 
+# Переопределение функции преобразования к верхнему геристру
+def sqlite_upper(value_):
+    return value_.upper()
+
+
 class Ktru:
     def __init__(self, db_path: str = "data/database/ktru.db"):
         """
@@ -135,8 +140,10 @@ class Ktru:
     def get_okpd(self, okpd_number, okpd_name):
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.create_function("UPPER", 1, sqlite_upper)
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
+                cursor.execute("PRAGMA case_sensitive_like = true")
                 execst = f"""
                     SELECT 
                         p."ОГРН",
@@ -145,11 +152,9 @@ class Ktru:
                         p."Наименование продукции"
                     FROM product p
                     LEFT JOIN export e ON p."ОГРН" = e."ОГРН"
-                    WHERE p."Наименование продукции" like "%{okpd_name}%" AND p."ОКПД2" like "%{okpd_number}%"
+                    WHERE UPPER(CONCAT(p."Наименование продукции")) like "%{okpd_name.upper()}%" AND p."ОКПД2" like "%{okpd_number}%"
                     """
-                cursor.execute(
-                    execst,
-                )
+                cursor.execute(execst)
                 return [dict(row) for row in cursor.fetchall()]
         except sqlite3.Error as e:
             print(f"Ошибка при получении ОКПД {okpd_number} из базы данных : {e}")
@@ -174,7 +179,7 @@ def processor() -> None:
         if okpd.lower() == "q" or okpd.lower() == "й":
             break
 
-        name = input("Введите название продукции")
+        name = input("Введите название продукции: ")
 
         res = processor_instance.get_okpd(okpd, name)
         data_rows = []
