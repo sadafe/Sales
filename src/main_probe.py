@@ -37,7 +37,7 @@ def display_menu(menu_items, selected_idx):
     stdscr.refresh()
 
 
-def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
+def select_from_menu(menu_items, callback_map: dict, selected_idx: int = 0):
     """
     Универсальная функция для выбора пункта меню.
     Параметры:
@@ -82,6 +82,7 @@ def select_from_menu(menu_items, callback_map=None, selected_idx: int = 0):
 def main_menu():
     menu_items = [
         "Выгрузка характеристик из КТРУ",
+        "Поиск ОКПД2 по КТРУ",
         "Поиск производителей по ОКПД2 и(или) наименованию",
         "Email",
         "Помощь",
@@ -89,10 +90,11 @@ def main_menu():
     ]
     callback_map = {
         0: ktru_menu,
-        1: okpd_menu,
-        2: email_menu,
-        3: help_menu,
-        4: exit_menu,
+        1: okpd_ktru,
+        2: okpd_menu,
+        3: email_menu,
+        4: help_menu,
+        5: exit_menu,
     }
     select_from_menu(menu_items, callback_map, 0)
 
@@ -137,6 +139,16 @@ def users_menu():
         2: main_menu,  # Возвращаемся на верхний уровень
     }
     select_from_menu(menu_items, callback_map, 0)
+
+def okpd_ktru():
+    curses.endwin()  # Завершаем curses перед запуском другой программы
+    try:
+        logger.debug("Запускаем модуль поиска ОКПД2 ")
+        utils_ktru.processor_okpd()
+        logger.debug("Модуль поиска ОКПД успешно завершен")
+    except Exception as e:
+        logger.error(f"Ошибка запуска программы поиска ОКПД: {e}")
+        print(f"Ошибка запуска программы: {e}")
 
 
 def email_menu():

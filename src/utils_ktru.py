@@ -183,16 +183,53 @@ class ZakupkiProcessor:
         os.remove(latex_file)
         logger.debug(f"Файлы успешно сохранены: {excel_file}, {docx_file}")
 
+    def process_okpd(self):
+        """
+        Поиск кодов ОКПД2 по номеру КТРУ
+
+        :param self: Описание
+        """
+        ktru_url = f"/epz/ktru/ktruCard/commonInfo.html?itemId={self.ktru}"
+        html_content = self.load_url(ktru_url)
+        soup = BeautifulSoup(html_content, "html.parser")
+        res = soup.select("tbody")
+        for r in res:
+            print(self._clean_text(r.find_all("td", {"class": "tableBlock__col"})[1]))
+
+
+def processor_okpd():
+    """Основная функция поиска ОКПД2 по КТРУ с пользовательским вводом"""
+    print("Введите КТРУ или q для выхода")
+    while True:
+        ktru_input = input("введите КТРУ вида 26.20.15.000-00000024: ").strip()
+        logger.debug(f"Ищем ОКПД2 по КТРУ- {ktru_input}")
+
+        if ktru_input.lower() == "q" or ktru_input.lower() == "й":
+            break
+
+        if validate_ktru(ktru_input):
+            processor_instance = ZakupkiProcessor(ktru_input)
+            try:
+                print(f"\nНайденые ОКПД2 по КТРУ:{ktru_input}")
+                processor_instance.process_okpd()
+                logger.debug(f"Поиск ОКПД2 по КТРУ -  {ktru_input} успешно проведен")
+            except Exception as e:
+                logger.error(f"Ошибка поиска по  КТРУ {ktru_input}: {e}")
+                print(f"Ошибка поиска ОКПД2 - {e}")
+        else:
+            print(
+                "Неверный формат КТРУ. Ожидается формат XX.XX.XX.XXX-XXXXXXXX. Попробуйте снова."
+            )
+
 
 def processor() -> None:
     """Основная функция обработки КТРУ с пользовательским вводом"""
     print("Введите КТРУ или q для выхода")
-    # logger.remove()
     while True:
         ktru_input = input("введите КТРУ вида 26.20.15.000-00000024: ").strip()
         logger.debug(f"введено для поиска: {ktru_input}")
 
-        if ktru_input.lower() == "q":
+        if ktru_input.lower() == "q" or ktru_input.lower() == "й":
             break
 
         if validate_ktru(ktru_input):
