@@ -2,7 +2,6 @@
 Поиск и извлечение email адресов
 """
 
-import json
 import os
 import random
 import time
@@ -11,7 +10,6 @@ from tkinter import Tk, filedialog
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from icecream import ic
 from loguru import logger
 
 from utils import (
@@ -21,8 +19,11 @@ from utils import (
     validate_emails,
 )
 
+# Константы
+DEFAULT_TIMEOUT = 20
 
-class ExtrationEmail:
+
+class ExtractionEmail:
     def __init__(self) -> None:
         pass
 
@@ -62,7 +63,7 @@ class ExtrationEmail:
             headers["Sec-Fetch-Site"] = "cross-site"
             headers["Sec-Fetch-User"] = "?1"
 
-        timeout = 20  # магическое число !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        timeout = DEFAULT_TIMEOUT
 
         for attempt in range(max_retries):
             try:
@@ -115,14 +116,23 @@ class ExtrationEmail:
             soup = BeautifulSoup(content, "html.parser")
 
             # Извлекаем название компании со страницы
-            company = soup.find_all("span", {"itemprop": "name"})[2].text
+            name_spans = soup.find_all("span", {"itemprop": "name"})
+            if len(name_spans) > 2:
+                company = name_spans[2].text.strip()
+            else:
+                # Альтернативный способ извлечения названия
+                title = soup.find("title")
+                if title:
+                    company = title.text.strip()
+                else:
+                    company = "Неизвестная компания"
             logger.debug(f"Найдена компания {company}")
 
             # 1. Извлекаем email из ссылок mailto:
             mailto_links = soup.select('a[href^="mailto:"]')
             for link in mailto_links:
                 href = link.get("href", "")
-                if href.startswith("mailto:"):
+                if isinstance(href, str) and href.startswith("mailto:"):
                     email = href[7:]  # Убираем 'mailto:'
                     # Удаляем параметры после email (если есть)
                     email = email.split("?")[0]
@@ -165,21 +175,21 @@ class ExtrationEmail:
             logger.error(f"Ошибка при извлечении email с {url}: {e}")
             return company, []
 
-    def load_excel(self, name):
+    def load_excel(self, name: str) -> pd.DataFrame | None:
         """
         Загрузка данных из excel файла
 
         :param name: имя файла
-        :return: DataFrame Pandas
-        :rtype: pd.DataFrame
+        :return: DataFrame Pandas или None при ошибке
+        :rtype: pd.DataFrame | None
         """
-        pd_data = pd.DataFrame
         try:
             pd_data = pd.read_excel(name)
+            logger.debug(f"Файл {name} успешно загружен")
+            return pd_data
         except Exception as e:
-            logger.error(f"Ощибка при чтении файла {name} - {e}")
-
-        return pd_data
+            logger.error(f"Ошибка при чтении файла {name}: {e}")
+            return None
 
     def to_url(self, ints) -> str:
         """
@@ -210,31 +220,48 @@ def process():
     print("Ищет email адреса из excel файла с ОГРН")
     root = Tk()
     root.withdraw()
-    output_file = filedialog.askopenfilename(
-        title="Выберите файл",
+    input_file = filedialog.askopenfilename(
+        title="Выберите файл с ОГРН",
+        filetypes=[("Excel files", "*.xlsx *.xls")]
     )
-    if not output_file:
-        output_file = "."
+    if not input_file:
+        logger.error("Файл не выбран")
+        return
 
-    list_email = ExtrationEmail()
-    emails = []
-    data_all = list_email.load_excel(output_file)
-    data = set(data_all['ОГРН'])
-    for url in data:
-        copm, email_comp = list_email.extract_emails_from_webpage(list_email.to_url(url))
-        if len(email_comp) == 0:
-            emails.append([copm, ''])
-        for em in email_comp:
-            emails.append([copm, em])
+    list_email = ExtractionEmail()
+    data_all = list_email.load_excel(input_file)
+    if data_all is None or data_all.empty:
+        logger.error("Не удалось загрузить данные из файла")
+        return
 
+    if 'ОГРН' not in data_all.columns:
+        logger.error("В файле отсутствует столбец 'ОГРН'")
+        return
 
-    ic(emails)
-    json_pd = pd.DataFrame(emails, columns=['name', 'emails'])
-    json_pd.index += 1
+    ogrn_data = set(data_all['ОГРН'].dropna())  # Убираем NaN и дубликаты
+    results = []  # Список словарей для лучшей структуры
 
-    name_f, name_s = os.path.split(output_file)
+    for ogrn in ogrn_data:
+        url = list_email.to_url(str(int(ogrn)))
+        if not url:
+            continue
+        company, emails = list_email.extract_emails_from_webpage(url)
+        if emails:
+            for email in emails:
+                results.append({"name": company, "email": email})
+        else:
+            results.append({"name": company, "email": ""})
 
-    json_pd.to_excel(f'{name_f}/email_{name_s}', index_label='№')
+    if results:
+        result_df = pd.DataFrame(results)
+        result_df.index += 1
+
+        name_f, name_s = os.path.split(input_file)
+        output_path = os.path.join(name_f, f"email_{name_s}")
+        result_df.to_excel(output_path, index_label='№')
+        logger.info(f"Результаты сохранены в {output_path}")
+    else:
+        logger.warning("Не найдено ни одного email адреса")
 
 
 def main():
