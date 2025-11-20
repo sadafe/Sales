@@ -3,12 +3,12 @@
 
 import os
 import re
-from tkinter import Tk, filedialog
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
+from utils import get_path
 
 KTRU_PATTERN = r"\d{2}\.\d{2}\.\d{2}\.\d{3}-\d{8}"
 
@@ -160,13 +160,8 @@ class ZakupkiProcessor:
         )
 
         # Выбор пути для сохранения файлов через диалог
-        root = Tk()
-        root.withdraw()  # Скрываем основное окно
-        output_dir = filedialog.askdirectory(
-            title="Выберите папку для сохранения файлов"
-        )
-        if not output_dir:
-            output_dir = "."
+        
+        output_dir = get_path()
 
         # Сохранение в файлы
         latex_file = os.path.join(output_dir, "tt.tex")

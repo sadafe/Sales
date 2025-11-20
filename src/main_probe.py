@@ -132,15 +132,6 @@ def okpd_menu():
         print(f"Ошибка запуска программы: {e}")
 
 
-def users_menu():
-    menu_items = ["Добавить пользователя", "Удалить пользователя", "Назад"]
-    callback_map = {
-        0: add_user,
-        1: remove_user,
-        2: main_menu,  # Возвращаемся на верхний уровень
-    }
-    select_from_menu(menu_items, callback_map, 0)
-
 def okpd_ktru():
     curses.endwin()  # Завершаем curses перед запуском другой программы
     try:
@@ -161,46 +152,6 @@ def email_menu():
     except Exception as e:
         logger.error(f"Ошибка запуска программы поиска emails: {e}")
         print(f"Ошибка запуска программы: {e}")
-
-
-def add_user():
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Введите имя пользователя: ")
-    stdscr.refresh()
-    username = stdscr.getstr().decode("utf-8").strip()
-    stdscr.addstr(1, 0, f"Пользователь {username} успешно добавлен!")
-    stdscr.getch()  # Пауза перед возвратом
-    stdscr.clear()
-
-
-def remove_user():
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Введите имя пользователя для удаления: ")
-    stdscr.refresh()
-    username = stdscr.getstr().decode("utf-8").strip()
-    stdscr.addstr(1, 0, f"Пользователь {username} удалён!")
-    stdscr.getch()  # Пауза перед возвратом
-    stdscr.clear()
-
-
-def add_product():
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Введите название продукта: ")
-    stdscr.refresh()
-    product_name = stdscr.getstr().decode("utf-8").strip()
-    stdscr.addstr(1, 0, f"Продукт '{product_name}' успешно добавлен!")
-    stdscr.getch()  # Пауза перед возвратом
-    stdscr.clear()
-
-
-def remove_product():
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Введите название продукта для удаления: ")
-    stdscr.refresh()
-    product_name = stdscr.getstr().decode("utf-8").strip()
-    stdscr.addstr(1, 0, f"Продукт '{product_name}' удалён!")
-    stdscr.getch()  # Пауза перед возвратом
-    stdscr.clear()
 
 
 def about():

@@ -12,12 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from utils import (
-    extract_emails_from_text,
-    get_random_user_agent,
-    normalize_url,
-    validate_emails,
-)
+from utils import (extract_emails_from_text, get_random_user_agent,
+                   normalize_url, validate_emails)
 
 # Константы
 DEFAULT_TIMEOUT = 20
@@ -150,7 +146,7 @@ class ExtractionEmail:
             for elem in soup.select("[data-email], [data-mail], [data-e-mail]"):
                 for attr_name in ["data-email", "data-mail", "data-e-mail"]:
                     if attr_name in elem.attrs:
-                        emails.extend(extract_emails_from_text(elem[attr_name]))
+                        emails.extend(extract_emails_from_text(elem[attr_name])) # type: ignore
 
             # 4. Ищем в элементах с классами, которые могут содержать email
             email_classes = ["email", "mail", "e-mail", "contact-email", "contact-mail"]

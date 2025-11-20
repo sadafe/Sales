@@ -8,10 +8,10 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from tkinter import Tk, filedialog
 
 import pandas as pd
 from loguru import logger
+from utils import get_path
 
 
 # Переопределение функции преобразования к верхнему геристру
@@ -202,13 +202,8 @@ def processor() -> None:
             )
 
             # Выбор пути для сохранения файлов через диалог
-            root = Tk()
-            root.withdraw()  # Скрываем основное окно
-            output_dir = filedialog.askdirectory(
-                title="Выберите папку для сохранения файлов"
-            )
-            if not output_dir:
-                output_dir = "."
+            
+            output_dir = get_path()
 
             excel_file = os.path.join(output_dir, f"{name} {okpd}.xlsx")
 
