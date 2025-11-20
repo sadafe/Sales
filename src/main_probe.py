@@ -3,6 +3,7 @@ import curses
 from loguru import logger
 
 import utils_data
+import utils_email
 import utils_ktru
 
 # Инициализация экрана
@@ -84,7 +85,7 @@ def main_menu():
         "Выгрузка характеристик из КТРУ",
         "Поиск ОКПД2 по КТРУ",
         "Поиск производителей по ОКПД2 и(или) наименованию",
-        "Email",
+        "Поиск Email по производителю",
         "Помощь",
         "Выход",
     ]
@@ -152,13 +153,14 @@ def okpd_ktru():
 
 
 def email_menu():
-    menu_items = ["Добавить продукт", "Удалить продукт", "Назад"]
-    callback_map = {
-        0: add_product,
-        1: remove_product,
-        2: main_menu,  # Возвращаемся на верхний уровень
-    }
-    select_from_menu(menu_items, callback_map, 0)
+    curses.endwin()  # Завершаем curses перед запуском другой программы
+    try:
+        logger.debug("Запускаем модуль поиска emails ")
+        utils_email.process()
+        logger.debug("Модуль поиска emails успешно завершен")
+    except Exception as e:
+        logger.error(f"Ошибка запуска программы поиска emails: {e}")
+        print(f"Ошибка запуска программы: {e}")
 
 
 def add_user():

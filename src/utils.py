@@ -33,14 +33,6 @@ def setup_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     # Очищаем существующие обработчики
     logger.remove()
 
-    # Добавляем обработчик для консоли
-    # logger.add(
-    #     lambda msg: print(msg, end=""),
-    #     level=log_level.upper(),
-    #     format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {message}",
-    #     colorize=True
-    # )
-
     # Обработчик для файла
     if log_file:
         log_path = Path(log_file)
@@ -401,6 +393,32 @@ def read_urls_from_file(file_path: str) -> List[str]:
     except Exception as e:
         logger.error("Ошибка при чтении файла с URL: %s", e)
         return []
+
+
+def excel_to_url(dataframe: set) -> List[str]:
+    """
+    формирует список url адресов из множества ОГРН номеров
+
+    :param dataframe: Множество ОГРН номеров
+    :type dataframe: set
+    :return: список нормализованных url адресов
+    :rtype: List[str]
+    """
+    result: List[str] = []
+    for i in dataframe:
+        if len(i) == 13:
+            # https://companium.ru/id/<13-значное>/contacts
+            url = f"https://companium.ru/id/{i}/contacts"
+            result.append(url)
+            continue
+
+        if len(i) == 15 and i:
+            # https://companium.ru/people/inn/<число_после_запятой>
+            url = f"https://companium.ru/people/inn/{i}"
+            result.append(url)
+            continue
+
+    return result
 
 
 def save_emails_to_file(emails: List[str], output_file: str) -> bool:
