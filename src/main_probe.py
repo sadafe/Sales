@@ -10,6 +10,7 @@ import utils_ktru
 
 
 def init_screen():
+    ''' Инициализация экрана '''
     global stdscr
     stdscr = curses.initscr()
     curses.noecho()
@@ -20,6 +21,7 @@ def init_screen():
 
 
 def cleanup():
+    """ Очистка экрана """
     global stdscr
     stdscr.keypad(False)
     curses.echo()
@@ -81,6 +83,7 @@ def select_from_menu(menu_items, callback_map: dict, selected_idx: int = 0):
 
 
 def main_menu():
+    """ Главное меню программы """
     menu_items = [
         "Выгрузка характеристик из КТРУ",
         "Поиск ОКПД2 по КТРУ",
@@ -101,6 +104,7 @@ def main_menu():
 
 
 def help_menu():
+    """ Меню помощи """
     menu_items = ["О программе", "Горячие клавиши", "Назад"]
     callback_map = {
         0: about,
@@ -111,6 +115,7 @@ def help_menu():
 
 
 def ktru_menu():
+    """ Программа поиска характеритик КТРУ """
     curses.endwin()  # Завершаем curses перед запуском другой программы
     try:
         logger.debug("Запускаем модуль КТРУ ")
@@ -122,6 +127,7 @@ def ktru_menu():
 
 
 def okpd_menu():
+    """ Программа поиска производителя по ОКПД2 """
     curses.endwin()  # Завершаем curses перед запуском другой программы
     try:
         logger.debug("Запускаем модуль ОКПД ")
@@ -133,6 +139,7 @@ def okpd_menu():
 
 
 def okpd_ktru():
+    """ Программа поиска КТРУ по ОКПД2 """
     curses.endwin()  # Завершаем curses перед запуском другой программы
     try:
         logger.debug("Запускаем модуль поиска ОКПД2 ")
@@ -144,6 +151,7 @@ def okpd_ktru():
 
 
 def email_menu():
+    """ Программа поиска email по ОГРН из файла """
     curses.endwin()  # Завершаем curses перед запуском другой программы
     try:
         logger.debug("Запускаем модуль поиска emails ")
@@ -155,6 +163,7 @@ def email_menu():
 
 
 def about():
+    """ Пункт меню о программе """
     stdscr.clear()
     stdscr.addstr(
         "Это приложение для обработки продаж и извлечения email.\n\nНажмите любую клавишу для возврата в меню."
@@ -165,6 +174,7 @@ def about():
 
 
 def hot_button():
+    """ Пункт меню с горячими клавишами """
     stdscr.clear()
     stdscr.addstr("Горячие клавиши:\n")
     stdscr.addstr("- Стрелки вверх/вниз: навигация по меню\n")
@@ -178,11 +188,13 @@ def hot_button():
 
 
 def exit_menu():
+    """ Пункт меню выхода из программы """
     cleanup()
     exit()
 
 
 def main(stdscr):
+    """ Точка входа """
     try:
         init_screen()
         main_menu()

@@ -119,12 +119,19 @@ class Ktru:
             if datetime.datetime.now() > time_file + datetime.timedelta(days=10):
                 logger.warning(f"Рекоментуется обновить файл {file}")
                 print(f"Рекоментуется обновить файл {file}")
-                time.sleep(5)
+                print(
+                    """
+                    Файлы можно скачать по адресам
+                    production.xlsx  https://gisp.gov.ru/pp719v2/pub/prod/
+                    export.xlsx https://gisp.gov.ru/company-catalog/
+                    """
+                )
+                time.sleep(1)
 
     def pd_to_sql(self):
         """Заполнение данными базу данных"""
 
-        self._load_pd("export.xlsx", "Exp", "export", 0)
+        self._load_pd("export.xlsx", "Export", "export", 0)
         self._load_pd("production.xlsx", "Продукция", "product", 2)
 
     def get_data(self, file):
