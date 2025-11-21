@@ -3,17 +3,10 @@
 """
 
 import os
-import random
 import time
 from pathlib import Path
+from tkinter import Tk, filedialog
 from typing import Optional, Tuple
-
-TKINTER_AVAILABLE = False
-try:
-    from tkinter import Tk, filedialog  # type: ignore
-    TKINTER_AVAILABLE = True
-except ImportError:
-    pass
 
 import pandas as pd
 import requests
@@ -22,8 +15,9 @@ from loguru import logger
 
 from src.utils import (
     extract_emails_from_text,
-    get_random_user_agent,
+    get_headers,
     normalize_url,
+    print_progress,
     validate_emails,
 )
 
@@ -66,31 +60,8 @@ class ExtractionEmail:
         Returns:
             Словарь с HTTP заголовками
         """
-        headers = {
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-            "cache-control": "no-cache",
-            "pragma": "no-cache",
-            "priority": "u=0, i",
-            "sec-ch-ua": '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"',
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "same-origin",
-            "sec-fetch-user": "?1",
-            "upgrade-insecure-requests": "1",
-            "user-agent": get_random_user_agent(),
-        }
 
-        # Добавляем случайные заголовки для большей уникальности
-        if random.random() > 0.5:
-            headers["Sec-Fetch-Dest"] = "document"
-            headers["Sec-Fetch-Mode"] = "navigate"
-            headers["Sec-Fetch-Site"] = "cross-site"
-            headers["Sec-Fetch-User"] = "?1"
-
-        return headers
+        return get_headers()
 
     def get_webpage_content(self, url: str, max_retries: Optional[int] = None) -> str:
         """
@@ -116,7 +87,7 @@ class ExtractionEmail:
                 logger.debug(f"Успешно загружена страница: {url}")
                 return response.text
 
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.Timeout as e:
                 logger.warning(
                     f"Попытка {attempt + 1}/{max_retries} не удалась для {url}: {e}"
                 )
@@ -130,6 +101,10 @@ class ExtractionEmail:
                     logger.error(
                         f"Не удалось загрузить страницу {url} после {max_retries} попыток"
                     )
+            except requests.exceptions.HTTPError:
+                print("\nНе могу получить данные с сайта https://companium.ru")
+                input('Пожалуйста проверте доступность сайта. Для выхода нажмите <Enter>')
+                raise ValueError('Ошибка получения данных')
 
         return ""
 
@@ -333,7 +308,9 @@ class ExtractionEmail:
         if len(ogrn_str) == OGRN_LENGTH_PEOPLE:
             return f"{BASE_URL_PEOPLE}/{ogrn_str}"
 
-        logger.warning(f"Неподдерживаемый формат ОГРН: {ogrn_str} (длина: {len(ogrn_str)})")
+        logger.warning(
+            f"Неподдерживаемый формат ОГРН: {ogrn_str} (длина: {len(ogrn_str)})"
+        )
         return ""
 
     def process_ogrn_list(
@@ -355,6 +332,8 @@ class ExtractionEmail:
         for idx, ogrn in enumerate(ogrn_list, 1):
             logger.info(f"Обработка {idx}/{total}: ОГРН {ogrn}")
 
+            print_progress(idx, total)
+
             url = self.ogrn_to_url(ogrn)
             if not url:
                 logger.warning(f"Не удалось создать URL для ОГРН {ogrn}")
@@ -374,9 +353,7 @@ class ExtractionEmail:
 
         return results
 
-    def save_results(
-        self, results: list[dict[str, str]], output_path: str
-    ) -> bool:
+    def save_results(self, results: list[dict[str, str]], output_path: str) -> bool:
         """
         Сохраняет результаты в Excel файл
 
@@ -416,18 +393,10 @@ def select_file_dialog() -> Optional[str]:
     Returns:
         Путь к выбранному файлу или None
     """
-    if not TKINTER_AVAILABLE:
-        logger.error("Tkinter не доступен. Используйте параметр file_path напрямую.")
-        return None
-
-    # Tk и filedialog доступны только если TKINTER_AVAILABLE = True
-    if not TKINTER_AVAILABLE:  # type: ignore
-        return None
-
     try:
-        root = Tk()  # type: ignore
+        root = Tk()
         root.withdraw()
-        file_path = filedialog.askopenfilename(  # type: ignore
+        file_path = filedialog.askopenfilename(
             title="Выберите файл с ОГРН",
             filetypes=[("Excel files", "*.xlsx *.xls")],
         )
@@ -475,6 +444,7 @@ def process(file_path: Optional[str] = None, delay: float = 1.0) -> None:
     # Получение уникальных ОГРН
     ogrn_data = data_all["ОГРН"].dropna().unique().tolist()
     logger.info(f"Найдено {len(ogrn_data)} уникальных ОГРН для обработки")
+    print(f'\nБудем искать email адреса для {len(ogrn_data)} производителей')
 
     # Обработка ОГРН
     results = extractor.process_ogrn_list(ogrn_data, delay=delay)
@@ -484,6 +454,8 @@ def process(file_path: Optional[str] = None, delay: float = 1.0) -> None:
         input_dir, input_filename = os.path.split(file_path)
         output_path = os.path.join(input_dir, f"email_{input_filename}")
         extractor.save_results(results, output_path)
+        print(f'Данные сохранены в файле {output_path}')
+        input('Для выхода нажмите <Enter>')
     else:
         logger.warning("Не найдено ни одного email адреса")
 

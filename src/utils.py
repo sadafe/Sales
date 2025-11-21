@@ -189,3 +189,36 @@ def get_path():
     if not output_dir:
         output_dir = "."
     return output_dir
+
+def get_headers() -> dict[str, str]:
+    """
+    Генерирует HTTP заголовки для запросов
+
+    Returns:
+        Словарь с HTTP заголовками
+    """
+    headers = {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "cache-control": "no-cache",
+        "pragma": "no-cache",
+        "priority": "u=0, i",
+        "sec-ch-ua": '"Chromium";v="130", "Google Chrome";v="130", "Not?A_Brand";v="99"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "same-origin",
+        "sec-fetch-user": "?1",
+        "upgrade-insecure-requests": "1",
+        "user-agent": get_random_user_agent(),
+    }
+
+    # Добавляем случайные заголовки для большей уникальности
+    if random.random() > 0.5:
+        headers["Sec-Fetch-Dest"] = "document"
+        headers["Sec-Fetch-Mode"] = "navigate"
+        headers["Sec-Fetch-Site"] = "cross-site"
+        headers["Sec-Fetch-User"] = "?1"
+
+    return headers
