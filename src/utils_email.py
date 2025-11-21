@@ -1,40 +1,71 @@
 """
-Поиск и извлечение email адресов
+Модуль для поиска и извлечения email адресов из веб-страниц по ОГРН
 """
 
 import os
 import random
 import time
-from tkinter import Tk, filedialog
+from pathlib import Path
+from typing import Optional, Tuple
+
+TKINTER_AVAILABLE = False
+try:
+    from tkinter import Tk, filedialog  # type: ignore
+    TKINTER_AVAILABLE = True
+except ImportError:
+    pass
 
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
 
-from utils import (extract_emails_from_text, get_random_user_agent,
-                   normalize_url, validate_emails)
+from src.utils import (
+    extract_emails_from_text,
+    get_random_user_agent,
+    normalize_url,
+    validate_emails,
+)
 
 # Константы
 DEFAULT_TIMEOUT = 20
+DEFAULT_MAX_RETRIES = 3
+BASE_URL_COMPANY = "https://companium.ru/id"
+BASE_URL_PEOPLE = "https://companium.ru/people/inn"
+OGRN_LENGTH_COMPANY = 13
+OGRN_LENGTH_PEOPLE = 15
+EMAIL_CLASSES = ["email", "mail", "e-mail", "contact-email", "contact-mail"]
+DATA_EMAIL_ATTRS = ["data-email", "data-mail", "data-e-mail"]
+UNKNOWN_COMPANY = "Неизвестная компания"
 
 
 class ExtractionEmail:
-    def __init__(self) -> None:
-        pass
+    """
+    Класс для извлечения email-адресов с веб-страниц компаний
+    """
 
-    def get_webpage_content(self, url: str, max_retries: int = 3) -> str:
+    def __init__(
+        self,
+        timeout: int = DEFAULT_TIMEOUT,
+        max_retries: int = DEFAULT_MAX_RETRIES,
+    ) -> None:
         """
-        Получает содержимое веб-страницы с повторными попытками
+        Инициализация класса
 
         Args:
-            url: URL для загрузки
-            max_retries: Максимальное количество попыток
+            timeout: Таймаут для HTTP запросов в секундах
+            max_retries: Максимальное количество повторных попыток
+        """
+        self.timeout = timeout
+        self.max_retries = max_retries
+
+    def _get_headers(self) -> dict[str, str]:
+        """
+        Генерирует HTTP заголовки для запросов
 
         Returns:
-            HTML содержимое страницы или "" при ошибке
+            Словарь с HTTP заголовками
         """
-
         headers = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -59,18 +90,32 @@ class ExtractionEmail:
             headers["Sec-Fetch-Site"] = "cross-site"
             headers["Sec-Fetch-User"] = "?1"
 
-        timeout = DEFAULT_TIMEOUT
+        return headers
+
+    def get_webpage_content(self, url: str, max_retries: Optional[int] = None) -> str:
+        """
+        Получает содержимое веб-страницы с повторными попытками
+
+        Args:
+            url: URL для загрузки
+            max_retries: Максимальное количество попыток (если None, используется self.max_retries)
+
+        Returns:
+            HTML содержимое страницы или пустая строка при ошибке
+        """
+        if max_retries is None:
+            max_retries = self.max_retries
+
+        headers = self._get_headers()
 
         for attempt in range(max_retries):
             try:
-                # Выбираем случайный прокси если доступны
-
-                response = requests.get(url, headers=headers, timeout=timeout)
+                response = requests.get(url, headers=headers, timeout=self.timeout)
                 response.raise_for_status()
 
                 logger.debug(f"Успешно загружена страница: {url}")
                 return response.text
-            # TODO: написать обработчик капчи
+
             except requests.exceptions.RequestException as e:
                 logger.warning(
                     f"Попытка {attempt + 1}/{max_retries} не удалась для {url}: {e}"
@@ -88,73 +133,149 @@ class ExtractionEmail:
 
         return ""
 
+    def _extract_company_name(self, soup: BeautifulSoup) -> str:
+        """
+        Извлекает название компании из HTML
+
+        Args:
+            soup: Объект BeautifulSoup с распарсенным HTML
+
+        Returns:
+            Название компании или "Неизвестная компания"
+        """
+        # Пытаемся найти название через itemprop="name"
+        name_spans = soup.find_all("span", {"itemprop": "name"})
+        if len(name_spans) > 2:
+            company = name_spans[2].text.strip()
+            if company:
+                return company
+
+        # Альтернативный способ - извлечение из title
+        title = soup.find("title")
+        if title:
+            company = title.text.strip()
+            if company:
+                return company
+
+        return UNKNOWN_COMPANY
+
+    def _extract_emails_from_mailto_links(self, soup: BeautifulSoup) -> list[str]:
+        """
+        Извлекает email из ссылок mailto:
+
+        Args:
+            soup: Объект BeautifulSoup с распарсенным HTML
+
+        Returns:
+            Список найденных email-адресов
+        """
+        emails = []
+        mailto_links = soup.select('a[href^="mailto:"]')
+
+        for link in mailto_links:
+            href = link.get("href", "")
+            if isinstance(href, str) and href.startswith("mailto:"):
+                email = href[7:]  # Убираем 'mailto:'
+                # Удаляем параметры после email (если есть)
+                email = email.split("?")[0].strip()
+                if "@" in email:
+                    emails.append(email)
+
+        return emails
+
+    def _extract_emails_from_links(self, soup: BeautifulSoup) -> list[str]:
+        """
+        Извлекает email из текста ссылок
+
+        Args:
+            soup: Объект BeautifulSoup с распарсенным HTML
+
+        Returns:
+            Список найденных email-адресов
+        """
+        emails = []
+        for link in soup.find_all("a"):
+            link_text = link.get_text().strip()
+            if "@" in link_text and "." in link_text:
+                found_emails = extract_emails_from_text(link_text)
+                emails.extend(found_emails)
+
+        return emails
+
+    def _extract_emails_from_data_attrs(self, soup: BeautifulSoup) -> list[str]:
+        """
+        Извлекает email из элементов с data-атрибутами
+
+        Args:
+            soup: Объект BeautifulSoup с распарсенным HTML
+
+        Returns:
+            Список найденных email-адресов
+        """
+        emails = []
+        selector = ", ".join([f"[{attr}]" for attr in DATA_EMAIL_ATTRS])
+        for elem in soup.select(selector):
+            for attr_name in DATA_EMAIL_ATTRS:
+                if attr_name in elem.attrs:
+                    attr_value = elem.attrs[attr_name]
+                    if isinstance(attr_value, str):
+                        emails.extend(extract_emails_from_text(attr_value))
+                    elif isinstance(attr_value, list):
+                        for value in attr_value:
+                            if isinstance(value, str):
+                                emails.extend(extract_emails_from_text(value))
+
+        return emails
+
+    def _extract_emails_from_classes(self, soup: BeautifulSoup) -> list[str]:
+        """
+        Извлекает email из элементов с определенными классами
+
+        Args:
+            soup: Объект BeautifulSoup с распарсенным HTML
+
+        Returns:
+            Список найденных email-адресов
+        """
+        emails = []
+        for class_name in EMAIL_CLASSES:
+            for elem in soup.select(f".{class_name}"):
+                emails.extend(extract_emails_from_text(elem.get_text()))
+
+        return emails
+
     @logger.catch
-    def extract_emails_from_webpage(self, url: str) -> tuple[str, list[str]]:
+    def extract_emails_from_webpage(self, url: str) -> Tuple[str, list[str]]:
         """
         Извлекает email-адреса с веб-страницы
 
-        :param url: адрес url
-        :type url: str
-        :return: возвращает название компании и привязанные email
-        :rtype: tuple[str, list[str]]
-        """
+        Args:
+            url: URL веб-страницы
 
-        emails = []
-        company = ""
+        Returns:
+            Кортеж (название компании, список email-адресов)
+        """
         normalized_url = normalize_url(url)
         content = self.get_webpage_content(normalized_url)
 
         if not content:
-            return company, emails
+            return "", []
 
         try:
-            # Используем BeautifulSoup для парсинга HTML
             soup = BeautifulSoup(content, "html.parser")
 
-            # Извлекаем название компании со страницы
-            name_spans = soup.find_all("span", {"itemprop": "name"})
-            if len(name_spans) > 2:
-                company = name_spans[2].text.strip()
-            else:
-                # Альтернативный способ извлечения названия
-                title = soup.find("title")
-                if title:
-                    company = title.text.strip()
-                else:
-                    company = "Неизвестная компания"
-            logger.debug(f"Найдена компания {company}")
+            # Извлекаем название компании
+            company = self._extract_company_name(soup)
+            logger.debug(f"Найдена компания: {company}")
 
-            # 1. Извлекаем email из ссылок mailto:
-            mailto_links = soup.select('a[href^="mailto:"]')
-            for link in mailto_links:
-                href = link.get("href", "")
-                if isinstance(href, str) and href.startswith("mailto:"):
-                    email = href[7:]  # Убираем 'mailto:'
-                    # Удаляем параметры после email (если есть)
-                    email = email.split("?")[0]
-                    if "@" in email:
-                        emails.append(email)
+            # Собираем email из разных источников
+            emails = []
+            emails.extend(self._extract_emails_from_mailto_links(soup))
+            emails.extend(self._extract_emails_from_links(soup))
+            emails.extend(self._extract_emails_from_data_attrs(soup))
+            emails.extend(self._extract_emails_from_classes(soup))
 
-            # 2. Ищем email в тексте ссылок
-            for link in soup.find_all("a"):
-                link_text = link.get_text().strip()
-                if "@" in link_text and "." in link_text:
-                    found_emails = extract_emails_from_text(link_text)
-                    emails.extend(found_emails)
-
-            # 3. Ищем в элементах с атрибутом data-email или похожими
-            for elem in soup.select("[data-email], [data-mail], [data-e-mail]"):
-                for attr_name in ["data-email", "data-mail", "data-e-mail"]:
-                    if attr_name in elem.attrs:
-                        emails.extend(extract_emails_from_text(elem[attr_name])) # type: ignore
-
-            # 4. Ищем в элементах с классами, которые могут содержать email
-            email_classes = ["email", "mail", "e-mail", "contact-email", "contact-mail"]
-            for class_name in email_classes:
-                for elem in soup.select(f".{class_name}"):
-                    emails.extend(extract_emails_from_text(elem.get_text()))
-
-            # 5. Ищем email в общем тексте страницы
+            # Ищем email в общем тексте страницы
             page_text = soup.get_text()
             emails.extend(extract_emails_from_text(page_text))
 
@@ -169,98 +290,206 @@ class ExtractionEmail:
 
         except Exception as e:
             logger.error(f"Ошибка при извлечении email с {url}: {e}")
-            return company, []
+            return "", []
 
-    def load_excel(self, name: str) -> pd.DataFrame | None:
+    def load_excel(self, file_path: str) -> Optional[pd.DataFrame]:
         """
-        Загрузка данных из excel файла
+        Загружает данные из Excel файла
 
-        :param name: имя файла
-        :return: DataFrame Pandas или None при ошибке
-        :rtype: pd.DataFrame | None
+        Args:
+            file_path: Путь к Excel файлу
+
+        Returns:
+            DataFrame Pandas или None при ошибке
         """
         try:
-            pd_data = pd.read_excel(name)
-            logger.debug(f"Файл {name} успешно загружен")
+            if not os.path.exists(file_path):
+                logger.error(f"Файл не найден: {file_path}")
+                return None
+
+            pd_data = pd.read_excel(file_path)
+            logger.debug(f"Файл {file_path} успешно загружен, строк: {len(pd_data)}")
             return pd_data
+
         except Exception as e:
-            logger.error(f"Ошибка при чтении файла {name}: {e}")
+            logger.error(f"Ошибка при чтении файла {file_path}: {e}")
             return None
 
-    def to_url(self, ints) -> str:
+    def ogrn_to_url(self, ogrn: str | int | float) -> str:
         """
-        Приведение url из ОГРН
+        Преобразует ОГРН в URL для запроса
 
-        :param ints: Данные из DataFrame номер ОГРН
-        :return: Приведенное url
-        :rtype: str
+        Args:
+            ogrn: ОГРН компании или ИНН физического лица
+
+        Returns:
+            URL для запроса или пустая строка если формат не поддерживается
         """
-        url = ""
-        i = str(ints)
+        ogrn_str = str(int(float(ogrn))) if isinstance(ogrn, float) else str(ogrn)
 
-        if len(i) == 13:
-            # https://companium.ru/id/<13-значное>/contacts
-            url = f"https://companium.ru/id/{i}/contacts"
+        if len(ogrn_str) == OGRN_LENGTH_COMPANY:
+            return f"{BASE_URL_COMPANY}/{ogrn_str}/contacts"
 
-        if len(i) == 15 and i:
-            # https://companium.ru/people/inn/<15-значное>
-            url = f"https://companium.ru/people/inn/{i}"
+        if len(ogrn_str) == OGRN_LENGTH_PEOPLE:
+            return f"{BASE_URL_PEOPLE}/{ogrn_str}"
 
-        return url
+        logger.warning(f"Неподдерживаемый формат ОГРН: {ogrn_str} (длина: {len(ogrn_str)})")
+        return ""
+
+    def process_ogrn_list(
+        self, ogrn_list: list[str | int | float], delay: float = 1.0
+    ) -> list[dict[str, str]]:
+        """
+        Обрабатывает список ОГРН и извлекает email-адреса
+
+        Args:
+            ogrn_list: Список ОГРН для обработки
+            delay: Задержка между запросами в секундах
+
+        Returns:
+            Список словарей с результатами {"name": str, "email": str}
+        """
+        results = []
+        total = len(ogrn_list)
+
+        for idx, ogrn in enumerate(ogrn_list, 1):
+            logger.info(f"Обработка {idx}/{total}: ОГРН {ogrn}")
+
+            url = self.ogrn_to_url(ogrn)
+            if not url:
+                logger.warning(f"Не удалось создать URL для ОГРН {ogrn}")
+                continue
+
+            company, emails = self.extract_emails_from_webpage(url)
+
+            if emails:
+                for email in emails:
+                    results.append({"name": company, "email": email})
+            else:
+                results.append({"name": company, "email": ""})
+
+            # Задержка между запросами
+            if idx < total:
+                time.sleep(delay)
+
+        return results
+
+    def save_results(
+        self, results: list[dict[str, str]], output_path: str
+    ) -> bool:
+        """
+        Сохраняет результаты в Excel файл
+
+        Args:
+            results: Список словарей с результатами
+            output_path: Путь для сохранения файла
+
+        Returns:
+            True если сохранение прошло успешно
+        """
+        if not results:
+            logger.warning("Нет данных для сохранения")
+            return False
+
+        try:
+            result_df = pd.DataFrame(results)
+            result_df.index += 1
+
+            # Создаем директорию если не существует
+            output_dir = os.path.dirname(output_path)
+            if output_dir:
+                Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+            result_df.to_excel(output_path, index_label="№")
+            logger.info(f"Результаты сохранены в {output_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении результатов: {e}")
+            return False
+
+
+def select_file_dialog() -> Optional[str]:
+    """
+    Открывает диалог выбора файла
+
+    Returns:
+        Путь к выбранному файлу или None
+    """
+    if not TKINTER_AVAILABLE:
+        logger.error("Tkinter не доступен. Используйте параметр file_path напрямую.")
+        return None
+
+    # Tk и filedialog доступны только если TKINTER_AVAILABLE = True
+    if not TKINTER_AVAILABLE:  # type: ignore
+        return None
+
+    try:
+        root = Tk()  # type: ignore
+        root.withdraw()
+        file_path = filedialog.askopenfilename(  # type: ignore
+            title="Выберите файл с ОГРН",
+            filetypes=[("Excel files", "*.xlsx *.xls")],
+        )
+        root.destroy()
+        return file_path if file_path else None
+
+    except Exception as e:
+        logger.error(f"Ошибка при открытии диалога выбора файла: {e}")
+        return None
+
 
 @logger.catch
-def process():
+def process(file_path: Optional[str] = None, delay: float = 1.0) -> None:
     """
-    Основная программа поиска email адресов по ОГРН
+    Основная функция для поиска email адресов по ОГРН
+
+    Args:
+        file_path: Путь к Excel файлу с ОГРН (если None, откроется диалог выбора)
+        delay: Задержка между запросами в секундах
     """
-    print("Ищет email адреса из excel файла с ОГРН")
-    root = Tk()
-    root.withdraw()
-    input_file = filedialog.askopenfilename(
-        title="Выберите файл с ОГРН",
-        filetypes=[("Excel files", "*.xlsx *.xls")]
-    )
-    if not input_file:
+    logger.info("Начинаем поиск email адресов из Excel файла с ОГРН")
+
+    # Выбор файла
+    if file_path is None:
+        file_path = select_file_dialog()
+
+    if not file_path:
         logger.error("Файл не выбран")
         return
 
-    list_email = ExtractionEmail()
-    data_all = list_email.load_excel(input_file)
+    # Инициализация класса
+    extractor = ExtractionEmail()
+
+    # Загрузка данных
+    data_all = extractor.load_excel(file_path)
     if data_all is None or data_all.empty:
         logger.error("Не удалось загрузить данные из файла")
         return
 
-    if 'ОГРН' not in data_all.columns:
+    # Проверка наличия столбца ОГРН
+    if "ОГРН" not in data_all.columns:
         logger.error("В файле отсутствует столбец 'ОГРН'")
         return
 
-    ogrn_data = set(data_all['ОГРН'].dropna())  # Убираем NaN и дубликаты
-    results = []  # Список словарей для лучшей структуры
+    # Получение уникальных ОГРН
+    ogrn_data = data_all["ОГРН"].dropna().unique().tolist()
+    logger.info(f"Найдено {len(ogrn_data)} уникальных ОГРН для обработки")
 
-    for ogrn in ogrn_data:
-        url = list_email.to_url(str(int(ogrn)))
-        if not url:
-            continue
-        company, emails = list_email.extract_emails_from_webpage(url)
-        if emails:
-            for email in emails:
-                results.append({"name": company, "email": email})
-        else:
-            results.append({"name": company, "email": ""})
+    # Обработка ОГРН
+    results = extractor.process_ogrn_list(ogrn_data, delay=delay)
 
+    # Сохранение результатов
     if results:
-        result_df = pd.DataFrame(results)
-        result_df.index += 1
-
-        name_f, name_s = os.path.split(input_file)
-        output_path = os.path.join(name_f, f"email_{name_s}")
-        result_df.to_excel(output_path, index_label='№')
-        logger.info(f"Результаты сохранены в {output_path}")
+        input_dir, input_filename = os.path.split(file_path)
+        output_path = os.path.join(input_dir, f"email_{input_filename}")
+        extractor.save_results(results, output_path)
     else:
         logger.warning("Не найдено ни одного email адреса")
 
 
-def main():
+def main() -> None:
+    """Точка входа в программу"""
     process()
 
 
